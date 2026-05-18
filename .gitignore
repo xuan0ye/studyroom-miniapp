@@ -13,3 +13,6 @@ $RECYCLE.BIN/
 # Node.js
 unpackage/
 .worktrees/
+node_modules/
+.hbuilderx/
+.idea/
