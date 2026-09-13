@@ -1,0 +1,68 @@
+{
+  "bsonType": "object",
+  "required": ["name", "status", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "userId": {
+      "bsonType": "string",
+      "description": "wx_user document ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "WeChat openid"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Card name"
+    },
+    "totalHours": {
+      "bsonType": "double",
+      "description": "Total available hours"
+    },
+    "remainHours": {
+      "bsonType": "double",
+      "description": "Remaining hours"
+    },
+    "expireTime": {
+      "bsonType": "long",
+      "description": "Expire timestamp in milliseconds"
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["enabled", "disabled", "expired"],
+      "description": "Card status"
+    },
+    "createTime": {
+      "bsonType": "long"
+    },
+    "updateTime": {
+      "bsonType": "long"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "userId_status_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "userId",
+            "Direction": "1"
+          },
+          {
+            "Name": "status",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

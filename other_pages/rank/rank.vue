@@ -5,147 +5,110 @@
 		<scroll-view scroll-y="true" :style="{height: viewHeight +'rpx'}">
 			<view style="background-image: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);position: relative;">
 				<view class="container">
-					<view style="margin: auto 180rpx;padding-top: 50rpx;">
+					<view style="margin: auto 160rpx;padding-top: 50rpx;">
 						<u-subsection bgColor="#ffffff80" :list="list" :current="current" fontSize="24"
 							@change="sectionChange"></u-subsection>
-
 					</view>
 					<view style="margin-top: 20rpx;">
-						<u--text :bold="false" size="26" color="#ffffff" align="center" text="排行榜更新延迟在24小时之内" />
+						<u-text :bold="false" size="24" color="#ffffff" align="center"
+							:text="current == 0 ? '每天开灯签到，连续天数越多排名越靠前' : '今日 6 点后，谁先到谁先开灯'" />
 					</view>
 				</view>
-				<view class="top">
-					<!-- 第二名 -->
-					<view class="two">
-						<view style="padding: 0;margin-left: 95rpx;margin-bottom: -10rpx;">
-							<u-icon name="/other_pages/static/rank/two.png" size="50rpx"></u-icon>
-						</view>
-						<view
-							style="border: 4rpx solid #dedfdf; width: 100rpx; height: 100rpx;border-radius: 100%;margin-left: 65rpx;">
-							<u-avatar :src="rankList[1].user.avatarUrl" size="100rpx"></u-avatar>
-						</view>
-						<view style="position: relative;">
-							<view style="width: 100%; background-color: #ffffff;">
-								<u--text :bold="false" size="26" color="#070707" align="center"
-									:text="rankList[1].user.nickname" />
-							</view>
-						</view>
-						<view
-							style="position:absolute;bottom: 20rpx;left: 30rpx; background-color: #efefef;border-radius: 40rpx;">
-							<view
-								style="display: flex; justify-content: center; width: 136rpx;margin: auto 20rpx; height: 60rpx;">
-								<u--text :bold="true" size="36" color="#4facfe" align="right"
-									:text="rankList[1].hours" />
-								<u--text :bold="false" size="26" color="#4facfe" align="" text="小时" />
-							</view>
-						</view>
-					</view>
-					<!-- 第一名 -->
-					<view class="one">
-						<view style="padding: 0;margin-left: 95rpx;margin-bottom: -10rpx;">
-							<u-icon name="/other_pages/static/rank/one.png" size="50rpx"></u-icon>
-						</view>
-						<view
-							style="border: 4rpx solid #dedfdf; width: 100rpx; height: 100rpx;border-radius: 100%;margin-left: 65rpx;">
-							<u-avatar :src="rankList[0].user.avatarUrl" size="100rpx"></u-avatar>
-						</view>
-						<view style="position: relative;">
-							<view style="width: 100%; background-color: #ffffff;">
-								<u--text :bold="false" size="26" color="#070707" align="center"
-									:text="rankList[0].user.nickname" />
-							</view>
-						</view>
-						<view
-							style="position:absolute;bottom: 60rpx;left: 30rpx; background-color: #efefef;border-radius: 40rpx;">
-							<view
-								style="display: flex; justify-content: center; width: 136rpx;margin: auto 20rpx; height: 60rpx;">
-								<u--text :bold="true" size="36" color="#4facfe" align="right"
-									:text="rankList[0].hours" />
-								<u--text :bold="false" size="26" color="#4facfe" align="" text="小时" />
-							</view>
-						</view>
-					</view>
-					<!-- 第三名 -->
-					<view class="three">
-						<view style="padding: 0;margin-left: 95rpx;margin-bottom: -10rpx;">
-							<u-icon name="/other_pages/static/rank/three.png" size="50rpx"></u-icon>
-						</view>
-						<view
-							style="border: 4rpx solid #dedfdf; width: 100rpx; height: 100rpx;border-radius: 100%;margin-left: 65rpx;">
-							<u-avatar :src="rankList[2].user.avatarUrl" size="100rpx"></u-avatar>
-						</view>
-						<view style="position: relative;">
-							<view style="width: 100%; background-color: #ffffff;">
-								<u--text :bold="false" size="26" color="#070707" align="center"
-									:text="rankList[2].user.nickname" />
-							</view>
-						</view>
-						<view
-							style="position:absolute;bottom: 20rpx;left: 30rpx; background-color: #efefef;border-radius: 40rpx;">
-							<view
-								style="display: flex; justify-content: center; width: 136rpx;margin: auto 20rpx; height: 60rpx;">
-								<u--text :bold="true" size="36" color="#4facfe" align="right"
-									:text="rankList[2].hours" />
-								<u--text :bold="false" size="26" color="#4facfe" align="" text="小时" />
-							</view>
-						</view>
-					</view>
-				</view>
-
 			</view>
-			<view>
+
+			<!-- 榜单说明 + 前三名 -->
+			<view class="top-three">
+				<view class="podium" v-if="rankList.length >= 3">
+					<view class="p-item second">
+						<view class="medal">🥈</view>
+						<u-avatar :src="normAvatar(rankList[1].avatarUrl)" size="100rpx"></u-avatar>
+						<view class="p-name">{{rankList[1].nickname}}</view>
+						<view class="p-val">{{valText(rankList[1])}}</view>
+					</view>
+					<view class="p-item first">
+						<view class="medal">🥇</view>
+						<u-avatar :src="normAvatar(rankList[0].avatarUrl)" size="120rpx"></u-avatar>
+						<view class="p-name">{{rankList[0].nickname}}</view>
+						<view class="p-val">{{valText(rankList[0])}}</view>
+					</view>
+					<view class="p-item third">
+						<view class="medal">🥉</view>
+						<u-avatar :src="normAvatar(rankList[2].avatarUrl)" size="100rpx"></u-avatar>
+						<view class="p-name">{{rankList[2].nickname}}</view>
+						<view class="p-val">{{valText(rankList[2])}}</view>
+					</view>
+				</view>
+				<view v-else-if="rankList.length == 2">
+					<view class="podium">
+						<view class="p-item second">
+							<view class="medal">🥈</view>
+							<u-avatar :src="normAvatar(rankList[1].avatarUrl)" size="100rpx"></u-avatar>
+							<view class="p-name">{{rankList[1].nickname}}</view>
+							<view class="p-val">{{valText(rankList[1])}}</view>
+						</view>
+						<view class="p-item first">
+							<view class="medal">🥇</view>
+							<u-avatar :src="normAvatar(rankList[0].avatarUrl)" size="120rpx"></u-avatar>
+							<view class="p-name">{{rankList[0].nickname}}</view>
+							<view class="p-val">{{valText(rankList[0])}}</view>
+						</view>
+					</view>
+				</view>
+				<view v-else-if="rankList.length == 1">
+					<view class="podium">
+						<view class="p-item first">
+							<view class="medal">🥇</view>
+							<u-avatar :src="normAvatar(rankList[0].avatarUrl)" size="120rpx"></u-avatar>
+							<view class="p-name">{{rankList[0].nickname}}</view>
+							<view class="p-val">{{valText(rankList[0])}}</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 4名以后 -->
+			<view v-if="rankList.length > 3">
 				<view class="container-list">
 					<view class="list-item" :class="{activeItem:index%2==0}" v-for="(item,index) in rankList.slice(3)"
 						:key="index">
 						<view>
 							<u-row>
 								<u-col span="2">
-									<view style="">
-										<u--text :bold="true" size="32" align="center" color="#000000" :text="index+4">
-										</u--text>
-									</view>
+									<u-text :bold="true" size="32" align="center" color="#000000" :text="index+4" />
 								</u-col>
 								<u-col span="2">
-									<view style="margin-left: -10rpx;">
-										<u-avatar :src="item.user.avatarUrl" size="80rpx"></u-avatar>
-									</view>
+									<u-avatar :src="normAvatar(item.avatarUrl)" size="80rpx"></u-avatar>
 								</u-col>
-								<u-col span="5">
-									<u--text :bold="true" size="32" align="left" color="#000000"
-										:text="item.user.nickname">
-									</u--text>
+								<u-col span="6">
+									<u-text :bold="true" size="30" align="left" color="#000000" :text="item.nickname" />
 								</u-col>
-								<u-col span="3">
-									<view style="display: flex; justify-content: flex-start;">
-										<u--text :bold="true" size="36" color="#4facfe" align="right"
-											:text="item.hours" />
-										<u--text :bold="false" size="26" color="#4facfe" align="left" text="小时" />
+								<u-col span="4">
+									<view style="display: flex; justify-content: flex-end; padding-right: 20rpx;">
+										<u-text :bold="true" size="32" color="#4facfe" align="right"
+											:text="valText(item)" />
 									</view>
 								</u-col>
 							</u-row>
 						</view>
 					</view>
-
 				</view>
 			</view>
-			<view style="height: 100rpx;">
 
+			<view v-if="rankList.length == 0" class="empty">
+				<u-empty text="暂无数据，快去开灯签到吧" mode="list" />
 			</view>
+
+			<view style="height: 100rpx;"></view>
 		</scroll-view>
 
+		<!-- 我的排名 -->
 		<view class="foot">
-			<view style="margin: 30rpx 80rpx;">
-				<u-row>
-					<u-col span="3">
-						<u-avatar :src="userInfo.avatarUrl" size="90rpx"></u-avatar>
-					</u-col>
-					<u-col span="9">
-						<view style="font-size: 26rpx;">
-							<p>{{userInfo.nickName}}</p>
-							<p>累计学习 {{hours}} 小时</p>
-						</view>
-					</u-col>
-				</u-row>
+			<view style="margin: 20rpx 40rpx;display: flex;align-items: center;">
+				<u-avatar :src="normAvatar(myInfo.avatarUrl)" size="80rpx"></u-avatar>
+				<view style="margin-left: 20rpx;">
+					<u-text :bold="true" size="28" :text="myInfo.nickname || '我'" />
+					<u-text size="24" color="#999" :text="myRankText" />
+				</view>
 			</view>
 		</view>
 	</view>
@@ -153,159 +116,194 @@
 
 <script>
 	import {
-		mapState,
-	} from 'vuex';
-	import {
-		getRecordHousrs,
-		getRecordRank
+		getStreakRank,
+		getEarlyRank,
+		getRecordHousrs
 	} from '@/config/api.js'
 	export default {
-		computed: {
-			...mapState(['hours'])
-		},
 		data() {
 			return {
-				list: ['全国排名'],
+				list: ['连续签到', '今日早到'],
 				current: 0,
-				year: new Date().getFullYear(),
-				month: new Date().getMonth() + 1,
-				day: new Date().getDate(),
 				rankList: [],
-				viewHeight: 1400,
-				userInfo: {}
+				viewHeight: 1200,
+				myInfo: {},
+				myRank: -1
+			}
+		},
+		computed: {
+			myRankText() {
+				if (this.myRank < 0) return ''
+				if (this.myRank === 0) return '🏆 当前第 1 名'
+				return '当前第 ' + (this.myRank + 1) + ' 名'
 			}
 		},
 		methods: {
-			sectionChange(index) {
-				this.current = index
+			// 头像归一化: 后端可能返回裸 base64, 需加 data:image 前缀否则加载报错
+			normAvatar(val) {
+				if (!val) return ''
+				var s = String(val)
+				if (s.indexOf('data:image') === 0) return s
+				if (s.indexOf('http') === 0 || s.indexOf('/') === 0 || s.indexOf('wxfile') === 0) return s
+				if (/^[A-Za-z0-9+/=]+$/.test(s) && s.length > 50) {
+					return 'data:image/jpeg;base64,' + s
+				}
+				return s
+			},
+			valText(item) {
+				if (this.current == 0) return (item.streak != null ? item.streak : 0) + ' 天'
+				// 早到榜: 显示签到时间
+				if (item.checkInTime) {
+					const t = new Date(String(item.checkInTime).replace(/-/g, '/'))
+					const pad = function(n) { return n < 10 ? '0' + n : '' + n }
+					return pad(t.getHours()) + ':' + pad(t.getMinutes())
+				}
+				return '-'
+			},
+			sectionChange(e) {
+				this.current = e
+				this.loadRank()
+			},
+			async loadRank() {
+				try {
+					let res
+					if (this.current == 0) {
+						res = await getStreakRank({}, { custom: { auth: true, catch: true } })
+					} else {
+						res = await getEarlyRank({}, { custom: { auth: true, catch: true } })
+					}
+					const list = (res && res.data) || []
+					this.rankList = list
+					// 找我的排名
+					this.myRank = -1
+					const myOpenid = uni.getStorageSync('openid')
+					const myUid = uni.getStorageSync('userId')
+					for (let i = 0; i < list.length; i++) {
+						const u = list[i]
+						if (u.userId != null && myUid != null && String(u.userId) === String(myUid)) {
+							this.myRank = i
+							break
+						}
+					}
+				} catch (e) {
+					console.error('加载排行榜失败', e)
+				}
 			},
 			async getHours() {
-				const {
-					data: res
-				} = await getRecordHousrs({
-					custom: {
-						auth: true
-					}
-				})
-				console.log(res)
-				this.$store.commit('setHours', res.hours)
-			},
-			async getRank() {
-				const {
-					data: res
-				} = await getRecordRank({
-					custom: {
-						auth: true
-					}
-				})
-				console.log(res)
-				this.rankList = res
+				try {
+					const { data: res } = await getRecordHousrs({}, { custom: { auth: true, catch: true } })
+					console.log('hours', res)
+				} catch (e) {}
 			}
 		},
 		onReady() {
 			const that = this
 			uni.getSystemInfo({
 				success(res) {
-					console.log(res)
-					that.viewHeight = (res.windowHeight - 140) * (750 / res.windowWidth)
+					that.viewHeight = (res.windowHeight - 160) * (750 / res.windowWidth)
 				}
 			})
-
 		},
-		created() {
+		onShow() {
 			const userInfo = uni.getStorageSync('userInfo')
-			this.userInfo = JSON.parse(userInfo)
-			console.log(this.userInfo)
+			try {
+				this.myInfo = userInfo ? JSON.parse(userInfo) : {}
+			} catch (e) {
+				this.myInfo = {}
+			}
 			this.getHours()
-			this.getRank()
+			this.loadRank()
 		}
 	}
 </script>
 
 <style lang="scss">
 	.container {
-		// background-color: #4CD964;
 		margin: auto 20rpx;
-		height: 440rpx;
+		height: 260rpx;
 	}
 
-	.top {
+	// 前三名领奖台
+	.top-three {
+		background-color: #ffffff;
+		margin: 20rpx;
+		border-radius: 20rpx;
+		padding: 20rpx 0 30rpx;
+	}
+
+	.podium {
 		display: flex;
-		justify-content: space-around;
-		margin: auto 20rpx;
-		position: absolute;
-		bottom: -80rpx;
+		justify-content: center;
+		align-items: flex-end;
+	}
 
-		// background-color: #005500;
-		.two {
-			position: absolute;
-			bottom: 0rpx;
-			left: 0rpx;
-			border-radius: 20rpx 0rpx 0rpx 20rpx;
-			// box-shadow:0px -10rpx 20rpx 0rpx #a8aaab;
-			background-color: #ffffff;
-			width: 236rpx;
-			height: 280rpx;
-			z-index: 1;
-			// text-align: center;
-			// align-items: center;
+	.p-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin: 0 20rpx;
+		padding-top: 30rpx;
+
+		.medal {
+			font-size: 40rpx;
+			margin-bottom: 10rpx;
 		}
 
-		.one {
-			position: absolute;
-			bottom: 0rpx;
-			left: 236rpx;
-			border-radius: 20rpx 20rpx 0rpx 0rpx;
-			box-shadow: 0px -6px 10px -1px darkgrey;
-			background-color: #ffffff;
-			width: 236rpx;
-			height: 320rpx;
-			z-index: 2;
+		.p-name {
+			font-size: 26rpx;
+			color: #333;
+			margin-top: 12rpx;
+			max-width: 180rpx;
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
 		}
 
-		.three {
-			position: absolute;
-			bottom: 0rpx;
-			left: 470rpx;
-			border-radius: 0rpx 20rpx 20rpx 0rpx;
-			// box-shadow:0px 0px 10px #ccced0;
-			background-color: #ffffff;
-			width: 240rpx;
-			height: 280rpx;
-			z-index: 1;
+		.p-val {
+			font-size: 28rpx;
+			color: #4facfe;
+			font-weight: bold;
+			margin-top: 6rpx;
 		}
+	}
+
+	.first {
+		order: 1;
+	}
+
+	.second {
+		order: 0;
+	}
+
+	.third {
+		order: 2;
 	}
 
 	.container-list {
 		border-radius: 20rpx;
 		margin: auto 20rpx;
-		padding: auto 20rpx;
-		margin-top: 100rpx;
+		margin-top: 20rpx;
 		background-color: #ffffff;
-		// height: 400rpx;
-		// margin-bottom: 100rpx;
-
 	}
 
 	.list-item {
 		padding-top: 20rpx;
 		height: 100rpx;
-
-		// background-color: #398ADE;
-
-
 	}
 
 	.activeItem {
 		background-color: #f1f1f1;
 	}
 
+	.empty {
+		margin-top: 60rpx;
+	}
+
 	.foot {
-		height: 140rpx;
+		height: 120rpx;
 		width: 100%;
 		background-color: #ffffff;
 		position: absolute;
 		bottom: 0rpx;
-
 	}
 </style>

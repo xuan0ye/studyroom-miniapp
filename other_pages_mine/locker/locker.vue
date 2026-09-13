@@ -5,13 +5,13 @@
 		<view style="margin: auto 40rpx;">
 			<view style="margin-top: 40rpx;">
 				<view>
-					<u--text :bold="false" size="28" color="#b8b8b8" text="我的储物柜" align="left" />
+					<u-text :bold="false" size="28" color="#b8b8b8" text="我的储物柜" align="left" />
 				</view>
 				<view style="margin-top: 40rpx;display: flex ;justify-content: center;">
-					<image src="/other_pages_mine/static/card_package.png" mode="aspectFit"></image>
+					<image src="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/card_package.png" mode="aspectFit"></image>
 				</view>
 				<view style="margin-top: 40rpx;">
-					<u--text :bold="true" size="28" color="#9a9a9a" text="您还没有开通过储物柜" align="center" />
+					<u-text :bold="true" size="28" color="#9a9a9a" text="您还没有开通过储物柜" align="center" />
 				</view>
 			</view>
 		</view>
@@ -32,8 +32,12 @@
 		},
 		methods: {
 			toLocker() {
-				uni.navigateTo({
-					url: "/other_pages/recharge-locker/recharge-locker"
+				// 储物柜为演示占位页(后端未实现开通/支付), 明确提示避免"点了没反应"
+				uni.showModal({
+					title: '温馨提示',
+					content: '电子储物柜功能正在筹备中，敬请期待～',
+					showCancel: false,
+					confirmText: '知道了'
 				})
 			}
 		}

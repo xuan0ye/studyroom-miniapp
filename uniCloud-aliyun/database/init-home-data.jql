@@ -1,0 +1,25 @@
+// 初始化首页轮播和门店数据
+// 可以选中一段运行，也可以分两次运行。请按你的实际门店修改 roomName、roomAddr。
+
+db.collection('home_swiper').add({
+  url: '/static/index/vipCard.png',
+  title: '自习室预约',
+  link: '',
+  sort: 1,
+  status: 'enabled',
+  createTime: Date.now(),
+  updateTime: Date.now()
+});
+
+// 运行上面后，再选中下面这段单独运行
+db.collection('home_store').add({
+  roomId: '1',
+  roomName: '答有所岸24小时自习室',
+  roomAddr: '木香街百炉屯七号院三号楼一单元1404',
+  openTime: '00:00',
+  closeTime: '24:00',
+  sort: 1,
+  status: 'enabled',
+  createTime: Date.now(),
+  updateTime: Date.now()
+});

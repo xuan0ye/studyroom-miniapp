@@ -1,0 +1,131 @@
+{
+  "bsonType": "object",
+  "required": ["type", "cmd", "token", "sn", "status", "payload", "retryCount", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "type": {
+      "bsonType": "string",
+      "enum": ["REGISTER_FACE", "DELETE_FACE", "OPEN_DOOR"],
+      "description": "Business command type"
+    },
+    "cmd": {
+      "bsonType": "string",
+      "description": "Device protocol command, such as F1:redactUser"
+    },
+    "token": {
+      "bsonType": "string",
+      "description": "Command token"
+    },
+    "sn": {
+      "bsonType": "string",
+      "description": "Access control device serial number"
+    },
+    "userId": {
+      "bsonType": "string",
+      "description": "wx_user document ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "WeChat openid"
+    },
+    "profileId": {
+      "bsonType": "string",
+      "description": "access_profile document ID"
+    },
+    "orderId": {
+      "bsonType": "string",
+      "description": "Related order ID"
+    },
+    "jobnumber": {
+      "bsonType": "int",
+      "description": "Device job number"
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["pending", "processing", "success", "failed", "cancelled"],
+      "description": "Command execution status"
+    },
+    "payload": {
+      "bsonType": "object",
+      "description": "Full protocol payload for bridge service"
+    },
+    "retryCount": {
+      "bsonType": "int",
+      "description": "Retry count"
+    },
+    "nextRetryTime": {
+      "bsonType": "long",
+      "description": "Next retry timestamp in milliseconds"
+    },
+    "result": {
+      "bsonType": "object",
+      "description": "Device result payload"
+    },
+    "errorMsg": {
+      "bsonType": "string",
+      "description": "Latest error message"
+    },
+    "createTime": {
+      "bsonType": "long",
+      "description": "Create timestamp in milliseconds"
+    },
+    "updateTime": {
+      "bsonType": "long",
+      "description": "Update timestamp in milliseconds"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "status_createTime_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "status",
+            "Direction": "1"
+          },
+          {
+            "Name": "createTime",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    },
+    {
+      "IndexName": "token_unique",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "token",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": true
+      }
+    },
+    {
+      "IndexName": "sn_status_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "sn",
+            "Direction": "1"
+          },
+          {
+            "Name": "status",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

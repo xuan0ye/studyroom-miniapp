@@ -1,0 +1,5 @@
+{
+  "name": "vue-template-compiler",
+  "version": "2.6.14-uni-patch",
+  "main": "index.js"
+}

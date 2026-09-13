@@ -1,0 +1,87 @@
+{
+  "bsonType": "object",
+  "required": ["sn", "name", "status", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "sn": {
+      "bsonType": "string",
+      "description": "Access control device serial number"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Device name"
+    },
+    "storeId": {
+      "bsonType": "string",
+      "description": "Store ID"
+    },
+    "roomId": {
+      "bsonType": "string",
+      "description": "Room ID"
+    },
+    "ipaddress": {
+      "bsonType": "string",
+      "description": "Device LAN IP address"
+    },
+    "protocol": {
+      "bsonType": "string",
+      "enum": ["websocket", "mqtt"],
+      "description": "Device integration protocol"
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["enabled", "disabled", "offline"],
+      "description": "Device status"
+    },
+    "lastHeartbeatTime": {
+      "bsonType": "long",
+      "description": "Last heartbeat timestamp in milliseconds"
+    },
+    "remark": {
+      "bsonType": "string",
+      "description": "Remark"
+    },
+    "createTime": {
+      "bsonType": "long",
+      "description": "Create timestamp in milliseconds"
+    },
+    "updateTime": {
+      "bsonType": "long",
+      "description": "Update timestamp in milliseconds"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "sn_unique",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "sn",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": true
+      }
+    },
+    {
+      "IndexName": "roomId_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "roomId",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

@@ -48,7 +48,8 @@ export default new Vuex.Store({
 		},
 		setCard(state, payload) {
 			console.log(payload)
-			state.account.card = payload
+			// 防止后端返回 null/undefined 导致 account.card 失去 length
+			state.account.card = Array.isArray(payload) ? payload : (payload || [])
 		},
 		setHours(state, hours) {
 			state.hours = hours

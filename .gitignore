@@ -16,3 +16,7 @@ unpackage/
 node_modules/
 .hbuilderx/
 .idea/
+
+# 编译缓存/日志(DSH 会话产生)
+babel-cache/
+logs/

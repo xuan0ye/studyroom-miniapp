@@ -1,0 +1,60 @@
+{
+  "bsonType": "object",
+  "required": ["url", "status", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "url": {
+      "bsonType": "string",
+      "description": "Swiper image URL or static path"
+    },
+    "title": {
+      "bsonType": "string",
+      "description": "Swiper title"
+    },
+    "link": {
+      "bsonType": "string",
+      "description": "Optional link"
+    },
+    "sort": {
+      "bsonType": "int",
+      "description": "Sort order"
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["enabled", "disabled"],
+      "description": "Status"
+    },
+    "createTime": {
+      "bsonType": "long"
+    },
+    "updateTime": {
+      "bsonType": "long"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "status_sort_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "status",
+            "Direction": "1"
+          },
+          {
+            "Name": "sort",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

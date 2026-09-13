@@ -5,12 +5,12 @@
 			:bgColor="bgColor" placeholder="true" @leftClick="showMenu" v-if="custom">
 			<view class="u-nav-slot my-text" slot="left">
 				<view style="width: 260rpx;">
-					<u--text :lines="1" :bold="true" size="36" :selectable="false" :text="store.roomName" />
+					<u-text :lines="1" :bold="true" size="36" :selectable="false" :text="store.roomName" />
 				</view>
 
 			</view>
 			<view class="u-nav-slot" slot="center" @click="showMenu">
-				<u--text :bold="true" size="28" color="#35a5ed" :selectable="false" text="切换" />
+				<u-text :bold="true" size="28" color="#35a5ed" :selectable="false" text="切换" />
 				<u-icon name="arrow-right" color="#35a5ed" size="32"></u-icon>
 			</view>
 		</u-navbar>
@@ -104,13 +104,8 @@
 </script>
 
 <style lang="scss">
-	/* #ifndef APP-NVUE */
-	page {
-		background-color: $u-bg-color;
-	}
-
-	/* #endif */
-
+	/* 组件 wxss 不允许使用 page 标签选择器（微信小程序会报 Some selectors are not allowed in component wxss），
+	   页面背景色由各页面自己控制 */
 	.u-page {
 		padding: 0;
 		flex: 1;

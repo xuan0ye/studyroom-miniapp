@@ -1,0 +1,102 @@
+{
+  "bsonType": "object",
+  "required": ["sn", "eventType", "eventTime", "createTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "sn": {
+      "bsonType": "string",
+      "description": "Access control device serial number"
+    },
+    "eventType": {
+      "bsonType": "string",
+      "enum": ["OPEN_RECORD", "STRANGER", "STRANGER_HIGH_TEMP", "DEVICE_HEARTBEAT", "COMMAND_RESULT"],
+      "description": "Access event type"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Person name from device record"
+    },
+    "jobnumber": {
+      "bsonType": "int",
+      "description": "Device job number"
+    },
+    "openType": {
+      "bsonType": "int",
+      "description": "1 face, 2 card, 3 password, 4 fingerprint, 5 remote open"
+    },
+    "temperature": {
+      "bsonType": "double",
+      "description": "Temperature from device"
+    },
+    "pic": {
+      "bsonType": "string",
+      "description": "Captured image base64"
+    },
+    "fileID": {
+      "bsonType": "string",
+      "description": "Stored captured image fileID"
+    },
+    "commandId": {
+      "bsonType": "string",
+      "description": "Related access_command ID"
+    },
+    "token": {
+      "bsonType": "string",
+      "description": "Related command token"
+    },
+    "rawPayload": {
+      "bsonType": "object",
+      "description": "Raw device payload"
+    },
+    "eventTime": {
+      "bsonType": "long",
+      "description": "Device event timestamp in seconds or milliseconds"
+    },
+    "createTime": {
+      "bsonType": "long",
+      "description": "Create timestamp in milliseconds"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "sn_eventTime_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "sn",
+            "Direction": "1"
+          },
+          {
+            "Name": "eventTime",
+            "Direction": "-1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    },
+    {
+      "IndexName": "eventType_eventTime_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "eventType",
+            "Direction": "1"
+          },
+          {
+            "Name": "eventTime",
+            "Direction": "-1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

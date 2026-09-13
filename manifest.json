@@ -1,5 +1,5 @@
 {
-    "name" : "米娜桑の自习室",
+    "name" : "答岸自习室",
     "appid" : "__UNI__ECA9B12",
     "description" : "",
     "versionName" : "1.0.0",
@@ -55,12 +55,8 @@
             "urlCheck" : false,
             "minified" : true
         },
-        "usingComponents" : true,
-        "permission" : {
-            "scope.userLocation" : {
-                "desc" : "test"
-            }
-        }
+        "lazyCodeLoading" : "requiredComponents",
+        "__usePrivacyCheck__" : true
     },
     "mp-alipay" : {
         "usingComponents" : true

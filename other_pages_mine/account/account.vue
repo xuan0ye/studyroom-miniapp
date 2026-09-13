@@ -5,17 +5,17 @@
 		<view style="margin: auto 40rpx;">
 			<view style="margin-top: 140rpx;">
 				<view>
-					<u--text :bold="false" size="28" color="#303133" text="总余额" align="center" />
+					<u-text :bold="false" size="28" color="#303133" text="总余额" align="center" />
 				</view>
 				<view style="margin-top: 40rpx;display: flex ;justify-content: center;">
-					<image src="/other_pages_mine/static/account.png" mode="aspectFit"></image>
+					<image src="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/account.png" mode="aspectFit"></image>
 				</view>
 				<view style="margin-top: 40rpx;display: flex; justify-content: center;width: 100%;align-items: center;">
 					<view>
-						<u--text :bold="true" size="50" color="#35a5ed" :text="account.balance" align="right" />
+						<u-text :bold="true" size="50" color="#35a5ed" :text="account.balance" align="right" />
 					</view>
 					<view style="margin-bottom: -12rpx;margin-left: 10rpx;">
-						<u--text :bold="true" size="26" color="#35a5ed" text="点" align="left" />
+						<u-text :bold="true" size="26" color="#35a5ed" text="点" align="left" />
 					</view>
 				</view>
 			</view>

@@ -1,0 +1,16 @@
+// 初始化门禁设备数据
+// 使用前请把 sn、name、storeId、roomId、ipaddress 改成你的真实设备信息
+
+db.collection('access_device').add({
+  sn: '8002F432050F',
+  name: '门店大门',
+  storeId: '1',
+  roomId: '1',
+  ipaddress: '192.168.1.66',
+  protocol: 'websocket',
+  status: 'enabled',
+  lastHeartbeatTime: 0,
+  remark: '已替换为真实门禁 SN',
+  createTime: Date.now(),
+  updateTime: Date.now()
+});

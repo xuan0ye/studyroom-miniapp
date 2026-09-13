@@ -5,52 +5,52 @@
 		<view class="container">
 			<view class="card">
 				<view>
-					<u--text :bold="false" size="25" color="#ebf0f9" text="MiNa(重庆)大学城店" align="left" />
+					<u-text :bold="false" size="25" color="#ebf0f9" text="MiNa(重庆)大学城店" align="left" />
 				</view>
 				<view style="margin: 65rpx auto;">
-					<u--text :bold="false" size="50" color="#ebf0f9" text="电子储物柜" align="center" />
+					<u-text :bold="false" size="50" color="#ebf0f9" text="电子储物柜" align="center" />
 				</view>
 				<view>
-					<u--text :bold="false" size="25" color="#ebf0f9" text="剩余70个" align="right" />
+					<u-text :bold="false" size="25" color="#ebf0f9" text="剩余70个" align="right" />
 				</view>
 			</view>
 			<view style="margin: 40rpx auto;">
-				<u--text :bold="true" size="30" color="#303133" text="储物柜" align="left" />
+				<u-text :bold="true" size="30" color="#303133" text="储物柜" align="left" />
 			</view>
 			<view class="card-item">
 				<view class="left" @click="select(50,30)" :class="{active:money==50}">
 					<view style="margin:25rpx auto;">
-						<u--text :bold="false" size="25" color="#303133" text="30天" align="center" />
+						<u-text :bold="false" size="25" color="#303133" text="30天" align="center" />
 					</view>
 					<view>
-						<u--text :bold="false" size="30" color="#303133" text="￥50.00" align="center" />
+						<u-text :bold="false" size="30" color="#303133" text="￥50.00" align="center" />
 					</view>
 					<view style="margin-top: 25rpx;">
-						<u--text :bold="false" size="20" decoration="line-through" color="#868686" text="￥50.00"
+						<u-text :bold="false" size="20" decoration="line-through" color="#868686" text="￥50.00"
 							align="center" />
 					</view>
 				</view>
 				<view class="center" @click="select(90,60)" :class="{active:money==90}">
 					<view style="margin:25rpx auto;">
-						<u--text :bold="false" size="25" color="#303133" text="60天" align="center" />
+						<u-text :bold="false" size="25" color="#303133" text="60天" align="center" />
 					</view>
 					<view>
-						<u--text :bold="false" size="30" color="#303133" text="￥90.00" align="center" />
+						<u-text :bold="false" size="30" color="#303133" text="￥90.00" align="center" />
 					</view>
 					<view style="margin-top: 25rpx;">
-						<u--text :bold="false" size="20" decoration="line-through" color="#868686" text="￥100.00"
+						<u-text :bold="false" size="20" decoration="line-through" color="#868686" text="￥100.00"
 							align="center" />
 					</view>
 				</view>
 				<view class="right" @click="select(120,90)" :class="{active:money==120}">
 					<view style="margin:25rpx auto;">
-						<u--text :bold="false" size="25" color="#303133" text="90天" align="center" />
+						<u-text :bold="false" size="25" color="#303133" text="90天" align="center" />
 					</view>
 					<view>
-						<u--text :bold="false" size="30" color="#303133" text="￥120.00" align="center" />
+						<u-text :bold="false" size="30" color="#303133" text="￥120.00" align="center" />
 					</view>
 					<view style="margin-top: 25rpx;">
-						<u--text :bold="false" size="20" decoration="line-through" color="#868686" text="￥150.00"
+						<u-text :bold="false" size="20" decoration="line-through" color="#868686" text="￥150.00"
 							align="center" />
 					</view>
 				</view>

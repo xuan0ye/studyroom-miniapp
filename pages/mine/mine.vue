@@ -6,29 +6,41 @@
 			<view class="user">
 				<u-row>
 					<u-col span="2">
-						<view class="user-avatar">
+						<!-- 微信头像昵称填写能力: button open-type=chooseAvatar 选微信头像 -->
+						<button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
 							<u-avatar :src="userInfo.avatarUrl" size="112"></u-avatar>
-						</view>
+							<view class="avatar-edit">
+								<u-text size="20" color="#ffffff" text="换头像" />
+							</view>
+						</button>
 					</u-col>
 					<u-col span="8">
 						<view class="user-info" v-if="isLogin">
-							<u--text :bold="false" size="36" :text="userInfo.nickName" />
+							<!-- input type=nickname: 点击唤起微信昵称填写 -->
+							<input class="nick-input" type="nickname" v-model="userInfo.nickName"
+								:placeholder="userInfo.nickName || '点击设置昵称'" placeholder-class="nick-placeholder"
+								@blur="saveNickName" />
 							<view style="height: 15rpx;"></view>
-							<u--text :bold="false" size="26" color="#c2c2c2" :text="userInfo.phone" v-if="isPhone" />
+							<u-text :bold="false" size="26" color="#c2c2c2" :text="userInfo.phone" v-if="isPhone" />
 							<view v-else style="padding-right: 80rpx;">
-								<u-button type="primary" size="mini" icon="phone" text="获取手机号"
-									open-type="getPhoneNumber" @getphonenumber="getPhoneNumber" />
+								<u-button type="primary" size="mini" icon="phone" text="绑定手机号"
+									@click="openPhoneTip" />
 							</view>
-
+							<!-- 是否在预约界面公开头像 -->
+							<view class="avatar-public-row">
+								<u-text :bold="false" size="24" color="#8a8a8a" text="预约界面公开我的头像" />
+								<u-switch v-model="showAvatar" size="40" activeColor="#35a5ed"
+									@change="onShowAvatarChange"></u-switch>
+							</view>
 						</view>
-						<view v-else style="padding-left: 40rpx;" v-else>
+						<view v-else style="padding-left: 40rpx;">
 							<u-button type="success" @click="getUserInfo" size="normal" icon="weixin-fill"
 								text="微信用户一键登录" />
 						</view>
 					</u-col>
 					<u-col span="1" offset="1" textAlign="right">
 						<view class="user-icon">
-							<u-icon :bold="false" name="/static/mine/setting.png" size="60"></u-icon>
+							<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/setting.png" size="60"></u-icon>
 						</view>
 					</u-col>
 				</u-row>
@@ -45,12 +57,12 @@
 								<u-row>
 									<u-col span="3">
 										<view style="margin-left: 20rpx;margin-top: 4rpx;">
-											<u-icon :bold="false" name="/static/mine/vip.png" size="50"></u-icon>
+											<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/vip.png" size="50"></u-icon>
 										</view>
 									</u-col>
 									<u-col span="6">
 										<view style="margin-left: 7rpx">
-											<u--text :bold="false" align="left" size="36" text="点" />
+											<u-text :bold="false" align="left" size="36" text="点" />
 										</view>
 									</u-col>
 								</u-row>
@@ -60,7 +72,7 @@
 										</u-col>
 										<u-col span="6">
 											<view style="margin-left: 7rpx">
-												<u--text :bold="false" align="left" color="#666666" size="24"
+												<u-text :bold="false" align="left" color="#666666" size="24"
 													:text="account.balance+'点'" />
 											</view>
 										</u-col>
@@ -76,12 +88,12 @@
 								<u-row>
 									<u-col span="3">
 										<view style="margin-left: 20rpx;margin-top: 4rpx;">
-											<u-icon :bold="false" name="/static/mine/vipbox.png" size="50"></u-icon>
+											<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/vipbox.png" size="50"></u-icon>
 										</view>
 									</u-col>
 									<u-col span="6">
 										<view style="margin-left: 7rpx">
-											<u--text :bold="false" align="left" size="36" text="卡包" />
+											<u-text :bold="false" align="left" size="36" text="卡包" />
 										</view>
 									</u-col>
 								</u-row>
@@ -91,8 +103,8 @@
 										</u-col>
 										<u-col span="6">
 											<view style="margin-left: 7rpx">
-												<u--text :bold="false" align="left" color="#666666" size="24"
-													:text="account.card.length+'张卡'" />
+												<u-text :bold="false" align="left" color="#666666" size="24"
+													:text="usableCardText" />
 											</view>
 										</u-col>
 									</u-row>
@@ -111,12 +123,12 @@
 								<u-row>
 									<u-col span="3">
 										<view style="margin-left: 20rpx;margin-top: 4rpx;">
-											<u-icon :bold="false" name="/static/mine/save.png" size="50"></u-icon>
+											<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/save.png" size="50"></u-icon>
 										</view>
 									</u-col>
 									<u-col span="6">
 										<view style="margin-left: 7rpx">
-											<u--text :bold="false" align="left" size="36" text="储物柜" />
+											<u-text :bold="false" align="left" size="36" text="储物柜" />
 										</view>
 									</u-col>
 								</u-row>
@@ -126,7 +138,7 @@
 										</u-col>
 										<u-col span="6">
 											<view style="margin-left: 7rpx">
-												<u--text :bold="false" align="left" color="#666666" size="24"
+												<u-text :bold="false" align="left" color="#666666" size="24"
 													text="暂未开通" />
 											</view>
 										</u-col>
@@ -142,12 +154,12 @@
 								<u-row>
 									<u-col span="3">
 										<view style="margin-left: 20rpx;margin-top: 4rpx;">
-											<u-icon :bold="false" name="/static/mine/mark.png" size="50"></u-icon>
+											<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/mark.png" size="50"></u-icon>
 										</view>
 									</u-col>
 									<u-col span="6">
 										<view style="margin-left: 7rpx">
-											<u--text :bold="false" align="left" size="36" text="记录" />
+											<u-text :bold="false" align="left" size="36" text="记录" />
 										</view>
 									</u-col>
 								</u-row>
@@ -157,7 +169,7 @@
 										</u-col>
 										<u-col span="6">
 											<view style="margin-left: 7rpx">
-												<u--text :bold="false" align="left" color="#666666" size="24"
+												<u-text :bold="false" align="left" color="#666666" size="24"
 													text="学习轨迹" />
 											</view>
 										</u-col>
@@ -168,63 +180,197 @@
 					</u-row>
 				</view>
 			</view>
-			<!-- 排行榜和意见反馈区域 -->
+			<!-- 功能菜单区 -->
 			<view class="rank-save">
+				<!-- 积分卡片 -->
+				<view class="points-card" @click="toPoints">
+					<view style="display:flex;align-items:center;">
+						<u-icon name="star" color="#ff9900" size="44" />
+						<view style="margin-left: 20rpx;">
+							<u-text :bold="true" size="32" color="#333" :text="points + ' 积分'" />
+							<u-text size="22" color="#999" text="签到得积分 · 抵钱购卡 · 兑换好礼" />
+						</view>
+					</view>
+					<view style="display:flex;align-items:center;">
+						<u-text size="24" color="#35a5ed" text="查看详情" />
+						<u-icon name="arrow-right" color="#35a5ed" size="26" />
+					</view>
+				</view>
+				<!-- 第一组: 门禁人脸 / 我的预约 -->
+				<view class="item" @click="toFaceEnroll">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="fingerprint" size="50"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" text="门禁人脸" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="录入人脸刷脸进门" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
+				<!-- 双人卡兑换 -->
+				<view class="item" @click="toCardRedeem">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="gift-fill" size="50" color="#fe2c55"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" text="双人卡兑换" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="输入兑换码领卡" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
+				<view class="item" @click="toSubscription">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/vipbox.png" size="50"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" text="我的预约" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="座位预约记录" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
+				<!-- 第二组: 排行榜 / AI学伴 -->
 				<view class="item" @click="toRank">
 					<view class="rank">
 						<u-row>
 							<u-col span="1">
 								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
-									<u-icon :bold="false" name="/static/mine/rank.png" size="50"></u-icon>
+									<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/rank.png" size="50"></u-icon>
 								</view>
 							</u-col>
 							<u-col span="7">
 								<view style="background-color: #ffffff;margin-left: 35rpx;">
-									<u--text :bold="false" size="36" text="排行榜" />
+									<u-text :bold="false" size="36" text="排行榜" />
 								</view>
 							</u-col>
 							<u-col span="4">
 								<view style="background-color: #ffffff;margin-right: 20rpx;">
-									<u--text :bold="false" size="24" color="#666666" align="right" text="每日学习排行榜" />
+									<u-text :bold="false" size="24" color="#666666" align="right" text="每日学习排行榜" />
 								</view>
 							</u-col>
 						</u-row>
 					</view>
-
 				</view>
-				<view class="item">
+				<view class="item" @click="toAI">
 					<view class="rank">
 						<u-row>
 							<u-col span="1">
-								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
-									<u-icon :bold="false" name="/static/mine/edit.png" size="50"></u-icon>
+								<view class="ai-badge">
+									<u-text text="AI" size="22" color="#ffffff" bold></u-text>
 								</view>
 							</u-col>
 							<u-col span="7">
 								<view style="margin-left: 35rpx;">
-									<u--text :bold="false" size="36" text="意见反馈" />
+									<u-text :bold="false" size="36" text="AI 学伴" />
 								</view>
 							</u-col>
 							<u-col span="4">
-								<view style="background-color: #ffffff;margin-right: 20rpx;">
-									<u--text :bold="false" size="24" color="#666666" align="right" text="问题反馈" />
+								<view style="margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="问答 · 查座 · 学情" />
 								</view>
 							</u-col>
 						</u-row>
 					</view>
-
+				</view>
+				<!-- 第三组: 意见反馈 -->
+				<view class="item" @click="toFeedback">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/edit.png" size="50"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" text="意见反馈" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="联系客服/退款" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
+				<!-- 退出登录 -->
+				<view class="item" @click="logout">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/setting.png" size="50"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" color="#e64340" text="退出登录" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#e64340" align="right" text="清理缓存数据" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
 				</view>
 			</view>
-
-
-
-		</view>
-		<!-- 底部一言区域 -->
-		<view class="ont-toke" :style="{top: oneTokeMarginTop +'rpx;' }">
-			<u--text :bold="false" size="24" color="#353535" align="center" :text='oneToke' />
+		<!-- 底部一言标语(在菜单最后, tabbar 上方) -->
+		<view class="ont-toke">
+			<u-text :bold="false" size="24" color="#353535" align="center" :text='oneToke' />
 		</view>
 
 		<my-tabbar></my-tabbar>
+		</view>
+		<!-- 手机号用途说明弹层(收集前告知; 可暂不绑定) -->
+		<view v-if="phoneTipShow" class="myph-mask" @click.stop="skipPhoneBind">
+			<view class="myph-card" @click.stop>
+				<view class="myph-title">手机号用途说明</view>
+				<view class="myph-body">
+					<view class="myph-item">· 手机号仅用于作为你的登录账号，以及必要时的订单/售后联系；</view>
+					<view class="myph-item">· 不会被用于其它用途，也不会泄露给第三方；</view>
+					<view class="myph-item">· 你也可以暂不绑定，直接用当前微信账号继续使用全部功能，之后随时可回到本页补绑。</view>
+				</view>
+				<view class="myph-btns">
+					<view class="myph-btn myph-no" @click="skipPhoneBind">暂不绑定</view>
+					<button class="myph-btn myph-open" open-type="getPhoneNumber" @getphonenumber="getPhoneNumber">同意并绑定</button>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -236,10 +382,14 @@
 	import {
 		login,
 		phone,
-		userInfo,
 		getBalance,
-		getCard
+		getCard,
+		uploadAvatar,
+		updateUser,
+		getUserProfile,
+		myPoints
 	} from '@/config/api.js';
+	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js';
 	export default {
 		data() {
 			return {
@@ -250,20 +400,33 @@
 					'/other_pages_mine/locker/locker',
 					'/other_pages_mine/learn_record/learn_record'
 				],
+				loginLoading: false,
 				userInfo: {},
 				phone: undefined,
 				isLogin: false,
 				isPhone: false,
 				status: false,
-				code: undefined
+				points: 0,
+				showAvatar: true,
+				phoneTipShow: false,
 			}
 		},
 		computed: {
 			...mapState(['oneToke', 'account']),
+			// 可用卡数量文案: 与「我的会员卡(卡包)」口径一致 —— 未使用且未过期
+			usableCardText() {
+				var list = (this.account && this.account.card) ? this.account.card : []
+				var now = new Date()
+				var usable = list.filter(function(c) {
+					if (!c || !c.expiryTime || c.consumed) return false
+					return new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+				})
+				return (usable.length > 0 ? usable.length + '张可用' : '暂无可用卡')
+			}
 
 		},
 		methods: {
-			...mapMutations(['setAccount']),
+			...mapMutations(['setAccount', 'setIndex']),
 			setOneTokeMargin() {
 				const _this = this
 				uni.getSystemInfo({
@@ -273,6 +436,180 @@
 						console.log(_this.oneTokeMarginTop)
 					}
 				})
+			},
+			async changeAvatar() {
+				var that = this
+				// 微信隐私保护指引授权（相册/相机/选中的照片）：未同意先弹官方窗
+				var privacyOk = await ensurePrivacyAuth()
+				if (!privacyOk) {
+					uni.$u.toast('需先同意《隐私保护指引》才能从相册/相机选择头像')
+					return
+				}
+				uni.chooseImage({
+					count: 1,
+					sizeType: ['compressed'],
+					sourceType: ['album', 'camera'],
+					success: (res) => {
+						var path = res.tempFilePaths[0]
+						// 先经 getImageInfo 转规范路径再读取, 避免部分机型 readFile 直接读临时路径失败
+						uni.getImageInfo({
+							src: path,
+							success: (info) => {
+								that.readAvatarAsBase64(info.path)
+							},
+							fail: () => {
+								that.readAvatarAsBase64(path)
+							}
+						})
+					}
+				})
+			},
+			// 微信官方头像选择(open-type=chooseAvatar)
+			onChooseAvatar(e) {
+				var that = this
+				var path = e.detail.avatarUrl
+				if (!path) return
+				// 本地预览立即更新(临时路径, 仅当前会话有效)
+				that.userInfo.avatarUrl = path
+				// 微信 chooseAvatar 返回的临时路径在部分机型/基础库下 readFile 直接读会失败,
+				// 先经 getImageInfo 转成规范本地路径再转 base64 上传
+				uni.getImageInfo({
+					src: path,
+					success: (info) => {
+						that.readAvatarAsBase64(info.path)
+					},
+					fail: () => {
+						// getImageInfo 失败则尝试直接用原路径读取
+						that.readAvatarAsBase64(path)
+					}
+				})
+			},
+			// 读取头像临时文件转 base64 并上传后端持久化
+			readAvatarAsBase64(path) {
+				var that = this
+				uni.getFileSystemManager().readFile({
+					filePath: path,
+					encoding: 'base64',
+					success: (r) => {
+						var b64 = r.data
+						if (b64.length > 300000) {
+							uni.$u.toast('头像图片过大，请更换或压缩后再试')
+							return
+						}
+						uploadAvatar({ avatarUrl: b64 }, { custom: { auth: true, catch: true } })
+							.then(() => {
+								var dataUrl = 'data:image/jpeg;base64,' + b64
+								that.userInfo.avatarUrl = dataUrl
+								var cached = uni.getStorageSync('userInfo')
+								if (cached) {
+									try {
+										var obj = typeof cached === 'string' ? JSON.parse(cached) : cached
+										obj.avatarUrl = dataUrl
+										uni.setStorageSync('userInfo', JSON.stringify(obj))
+									} catch (e2) {}
+								}
+								uni.$u.toast('头像已更新')
+							})
+							.catch((err) => {
+								uni.$u.toast((err && err.msg) || '头像上传失败，请稍后再试')
+							})
+					},
+					fail: () => {
+						uni.$u.toast('读取头像失败')
+					}
+				})
+			},
+			// 头像值归一化: 后端可能返回裸 base64, u-avatar 需要 data:image 前缀, 否则当成路径加载报错
+			normalizeAvatar(val) {
+				if (!val) return ''
+				var s = String(val)
+				// 已经是 data:image 前缀
+				if (s.indexOf('data:image') === 0) return s
+				// 服务器本地存储头像(/upload/...) → 按当前运行环境拼根地址(dev=本地后端, 真机/生产=线上)
+				if (s.indexOf('/upload/') === 0) {
+					try {
+						var cfg = require('@/config/config.js')
+						return cfg.currentHost() + s
+					} catch (e) {}
+					return 'https://api.dayousuoan.top' + s
+				}
+				// 是 http(s) 或本地路径
+				if (s.indexOf('http') === 0 || s.indexOf('/') === 0 || s.indexOf('wxfile') === 0) return s
+				// 否则按裸 base64 处理(图片数据以常见头开头)
+				if (/^[A-Za-z0-9+/=]+$/.test(s) && s.length > 50) {
+					return 'data:image/jpeg;base64,' + s
+				}
+				return s
+			},
+			// 从后端拉取用户资料并合并到本地(头像/昵称优先用后端已保存的)
+			async refreshUserProfile() {
+				var that = this
+				try {
+					const res = await getUserProfile({}, { custom: { auth: true, catch: true } })
+					const profile = res && res.data ? res.data : res
+					if (!profile) return
+					var cached = uni.getStorageSync('userInfo')
+					var local = {}
+					if (cached) {
+						try { local = typeof cached === 'string' ? JSON.parse(cached) : cached } catch (e) {}
+					}
+					// 优先后端已保存的头像/昵称
+					if (profile.avatarUrl) {
+						var normAvatar = that.normalizeAvatar(profile.avatarUrl)
+						local.avatarUrl = normAvatar
+						local.nickName = profile.nickname || local.nickName || '微信用户'
+						that.userInfo = Object.assign({}, that.userInfo || {}, {
+							avatarUrl: normAvatar,
+							nickName: profile.nickname || that.userInfo.nickName
+						})
+					}
+					if (profile.phone) {
+						local.phone = profile.phone
+						that.userInfo.phone = profile.phone
+						that.isPhone = true
+						uni.setStorageSync('isPhone', true)
+					}
+					// 公开头像开关(默认公开)
+					if (profile.showAvatar != null) {
+						that.showAvatar = profile.showAvatar === 1
+					}
+					uni.setStorageSync('userInfo', JSON.stringify(local))
+				} catch (e) {
+					console.log('刷新用户资料失败', e)
+				}
+			},
+			// 保存昵称(微信昵称填写 input type=nickname)
+			saveNickName() {				var that = this
+				var nick = (this.userInfo.nickName || '').trim()
+				if (!nick || nick === '微信用户') return
+				// 更新本地缓存
+				var cached = uni.getStorageSync('userInfo')
+				if (cached) {
+					try {
+						var obj = typeof cached === 'string' ? JSON.parse(cached) : cached
+						obj.nickName = nick
+						uni.setStorageSync('userInfo', JSON.stringify(obj))
+					} catch (e) {}
+				}
+				// 上传后端(更新用户昵称)
+				updateUser({ nickname: nick }, { custom: { auth: true, catch: true } })
+					.then(() => {
+						uni.$u.toast('昵称已更新')
+					})
+					.catch(() => {})
+			},
+			// 是否在预约界面公开头像开关
+			onShowAvatarChange(val) {
+				var that = this
+				that.showAvatar = !!val
+				// 同步到后端(UserBo.showAvatar: 1公开 0不公开)
+				updateUser({ showAvatar: that.showAvatar ? 1 : 0 }, { custom: { auth: true, catch: true } })
+					.then(() => {
+						uni.$u.toast(that.showAvatar ? '已公开头像' : '已隐藏头像')
+					})
+					.catch(() => {
+						uni.$u.toast('设置失败，请重试')
+					})
 			},
 			toRank() {
 				console.log(this.isLogin)
@@ -285,7 +622,16 @@
 				}
 
 			},
-			toGrid(num) {
+			toAI() {
+				if (this.isLogin) {
+					uni.navigateTo({
+						url: '/other_pages/ai/ai-chat'
+					})
+				} else {
+					uni.$u.toast("请先登录")
+				}
+			},
+						toGrid(num) {
 				if (this.isLogin) {
 					uni.navigateTo({
 						url: this.pagePath[num]
@@ -295,75 +641,101 @@
 				}
 
 			},
-			async toLogin(info) {
-				const {
-					data
-				} = await login({
-					code: this.code
-				}, {
-					header: {
-						'content-type': 'application/x-www-form-urlencoded'
-					},
-				})
-				console.log(data)
-				const that = this;
-				if (data.token != '') {
-					uni.setStorageSync('token', data.token)
-					uni.setStorageSync('status', true)
-					that.status = true
-					userInfo({
-						encryptedData: info.encryptedData,
-						ivStr: info.iv
+			async toLogin(info, wxCode) {
+				const that = this
+				try {
+					// 本地联调: dev 环境且开启 devMockLogin 时使用模拟 code
+					const appConfig = require('@/config/config.js')
+					const code = (process.env.NODE_ENV !== 'production' && appConfig.devMockLogin) ? 'mock-demo' : wxCode
+					const {
+						data
+					} = await login({
+						code: code
 					}, {
 						header: {
 							'content-type': 'application/x-www-form-urlencoded'
-						},
-						custom: {
-							auth: true
 						}
-					}).then(res => {
-						uni.setStorageSync('userInfo', JSON.stringify(info.userInfo))
-						uni.setStorageSync('isLogin', true)
-						that.userInfo = info.userInfo
-						that.isLogin = true
-						console.log(res)
-						uni.showToast({
-							icon: 'success'
-						})
 					})
-					this.getAccount()
-				}
-
-				setTimeout(() => {
+					console.log(data)
+					if (data && data.token) {
+						uni.setStorageSync('token', data.token)
+						uni.setStorageSync('status', true)
+						that.status = true
+						const localUserInfo = {
+							...(info.userInfo || {}),
+							nickname: info.userInfo?.nickName || '微信用户',
+							avatarUrl: that.normalizeAvatar(info.userInfo?.avatarUrl || '')
+						}
+						uni.setStorageSync('userInfo', JSON.stringify(localUserInfo))
+						uni.setStorageSync('isLogin', true)
+						that.userInfo = localUserInfo
+						that.isLogin = true
+						uni.showToast({
+							icon: 'success',
+							title: '登录成功'
+						})
+						this.getAccount().catch(() => {})
+						// 登录后拉取后端已保存的用户资料(头像/昵称), 优先用用户上传过的, 避免每次登录被微信默认值覆盖
+						this.refreshUserProfile()
+					} else {
+						uni.$u.toast('登录失败，请重试')
+					}
+				} catch (err) {
+					const message = err?.msg || err?.errMsg || "微信登录失败，请重试"
+					console.log("toLogin error:", err)
+					uni.$u.toast(message)
+				} finally {
 					uni.hideLoading()
-				}, 2000)
+				}
 			},
 			checkLogin() {
-				const that = this
-				uni.login({
-					provider: 'weixin',
-					success(res) {
-						that.code = res.code
-					}
+				return new Promise((resolve, reject) => {
+					uni.login({
+						provider: 'weixin',
+						success(res) {
+							if (res && res.code) {
+								resolve(res.code)
+							} else {
+								reject(new Error('获取登录凭证失败'))
+							}
+						},
+						fail(err) {
+							reject(err)
+						}
+					})
 				})
-
 			},
 			getUserInfo() {
+				// 防止快速连点导致 showLoading/hideLoading 不配对
+				if (this.loginLoading) return
+				this.loginLoading = true
 				const that = this
-				that.checkLogin()
-				uni.getUserProfile({
-					desc: "获取用户信息",
-					success(res) {
-						uni.showLoading({
-							title: "正在登录中"
-						})
-						that.toLogin(res)
-
-					},
-					fail(err) {
-						console.log(err)
-					}
+				uni.showLoading({
+					title: "正在登录中"
 				})
+				that.checkLogin().then((wxCode) => {
+					// 新版微信基础库 getUserProfile 已无法弹出授权，直接使用默认昵称登录
+					const mockUserInfo = {
+						userInfo: {
+							nickName: '微信用户',
+							avatarUrl: ''
+						}
+					}
+					return that.toLogin(mockUserInfo, wxCode)
+				}).catch((err) => {
+					uni.$u.toast(err?.errMsg || "获取微信登录凭证失败")
+				}).finally(() => {
+					uni.hideLoading()
+					that.loginLoading = false
+				})
+			},
+			// 打开手机号用途说明弹层(收集前告知; 可暂不绑定)
+			openPhoneTip() {
+				this.phoneTipShow = true
+			},
+			// 暂不绑定: 关闭弹层, 账号仍可用(手机号仅作为账号, 非必需)
+			skipPhoneBind() {
+				this.phoneTipShow = false
 			},
 			getPhoneNumber(e) {
 				console.log(e)
@@ -389,13 +761,24 @@
 						uni.setStorageSync('userInfo', JSON.stringify(that.userInfo))
 						uni.setStorageSync('isPhone', true)
 						that.isPhone = true
+						that.phoneTipShow = false
 						console.log(that.userInfo)
 						console.log(res)
+						uni.hideLoading()
 						uni.showToast({
 							icon: 'success'
 						})
+					}).catch((err) => {
+						uni.hideLoading()
+						uni.showToast({
+							title: '获取手机号失败，请重试',
+							icon: 'none'
+						})
 					})
-
+				} else {
+					// 用户拒绝授权: 可暂不绑定, 账号与功能不受影响
+					this.phoneTipShow = false
+					uni.$u.toast('已取消绑定，可暂不绑定；需要时随时可回本页绑定')
 				}
 
 			},
@@ -408,7 +791,7 @@
 					const {
 						data: balance
 					} = await
-					getBalance({
+					getBalance({}, {
 						custom: {
 							auth: true,
 							catch: true
@@ -416,7 +799,7 @@
 					})
 					const {
 						data: card
-					} = await getCard({
+					} = await getCard({}, {
 						custom: {
 							auth: true,
 							catch: true
@@ -427,6 +810,13 @@
 					uni.setStorageSync('balance', balance.balance)
 					this.$store.dispatch("getCard", card)
 					uni.setStorageSync('card', JSON.stringify(card))
+					// 加载积分
+					try {
+						const { data: p } = await myPoints({}, { custom: { auth: true, catch: true } })
+						this.points = Number(p && p.points != null ? p.points : 0)
+					} catch (e) {
+						this.points = 0
+					}
 				} catch (res) {
 					if (res.code == 401) {
 						uni.clearStorageSync()
@@ -437,24 +827,85 @@
 
 
 			},
-			initData() {
+						toSubscription() {
+				if (!this.isLogin) {
+					uni.$u.toast("请先登录")
+					return
+				}
+				uni.navigateTo({
+					url: '/other_pages_mine/my_bookings/my_bookings'
+				})
+			},
+			toFaceEnroll() {
+				if (!this.isLogin) {
+					uni.$u.toast("请先登录")
+					return
+				}
+				uni.navigateTo({
+					url: '/other_pages/access/face-enroll'
+				})
+			},
+			toCardRedeem() {
+				uni.navigateTo({
+					url: '/other_pages_mine/card-redeem/card-redeem'
+				})
+			},
+			toFeedback() {
+				uni.navigateTo({
+					url: '/other_pages/feedback/feedback'
+				})
+			},
+			toPoints() {
+				uni.navigateTo({
+					url: '/other_pages/points/points'
+				})
+			},
+			logout() {
+				var that = this
+				uni.showModal({
+					title: '退出登录',
+					content: '退出后将清理本地缓存数据，确定退出吗？',
+					confirmText: '退出',
+					confirmColor: '#e64340',
+					success: (res) => {
+						if (!res.confirm) return
+						// 清理本地缓存
+						uni.clearStorageSync()
+						// 重置页面状态
+						that.userInfo = {}
+						that.phone = undefined
+						that.isLogin = false
+						that.isPhone = false
+						that.status = false
+						// 重新加载初始数据
+						that.initData()
+						uni.$u.toast('已退出登录')
+						setTimeout(function() {
+							uni.switchTab({ url: '/pages/index/index' })
+						}, 600)
+					}
+				})
+			},initData() {
 				Object.assign(this, {
-					userInfo: {},
+					loginLoading: false,
+				userInfo: {},
 					phone: undefined,
 					isLogin: false,
 					isPhone: false,
 					status: false,
-					code: undefined
 				});
 			}
 
 		},
 		onShow() {
 			console.log("onShow----------")
+			this.setIndex(2)
+			// 进入「我的」页即提醒隐私授权（头像/昵称/手机号等能力前置同意，官方弹窗）
+			ensurePrivacyAuth()
 			var isLogin = uni.getStorageSync('isLogin')
-			const that = this
 			if (isLogin == true) {
 				this.getAccount()
+				this.refreshUserProfile()
 			}
 		},
 		onReady() {
@@ -463,10 +914,22 @@
 		},
 		onLoad() {
 			var isLogin = uni.getStorageSync('isLogin')
-			const that = this
 			if (isLogin == true) {
 				// this.getAccount()
-				this.userInfo = JSON.parse(uni.getStorageSync('userInfo'))
+				var cached = uni.getStorageSync('userInfo')
+				if (cached) {
+					try {
+						this.userInfo = typeof cached === 'string' ? JSON.parse(cached) : cached
+						// 兼容旧缓存里的裸 base64 头像
+						if (this.userInfo && this.userInfo.avatarUrl) {
+							this.userInfo.avatarUrl = this.normalizeAvatar(this.userInfo.avatarUrl)
+						}
+					} catch (e) {
+						this.userInfo = {}
+					}
+				} else {
+					this.userInfo = {}
+				}
 				this.isLogin = isLogin
 				var isPhone = uni.getStorageSync('isPhone')
 				if (isPhone != null && isPhone != '') {
@@ -479,12 +942,6 @@
 				this.userInfo = {}
 				this.isLogin = false
 			}
-			uni.login({
-				provider: 'weixin',
-				success(res) {
-					that.code = res.code
-				}
-			})
 		}
 	}
 </script>
@@ -499,13 +956,59 @@
 	}
 
 	.user {
+		.avatar-btn {
+			background: transparent;
+			padding: 0;
+			margin: 0;
+			line-height: normal;
+			border: none;
+			position: relative;
+			display: inline-block;
+
+			&::after {
+				border: none;
+			}
+		}
+
 		.user-avatar {
 			// margin-top: 20rpx;
+			position: relative;
+
+			.avatar-edit {
+				position: absolute;
+				bottom: -6rpx;
+				left: 50%;
+				transform: translateX(-50%);
+				background: rgba(0, 0, 0, 0.5);
+				border-radius: 20rpx;
+				padding: 2rpx 12rpx;
+				white-space: nowrap;
+			}
 		}
 
 		.user-info {
 			// padding-top: 10rpx;
 			margin-left: 30rpx;
+
+			.nick-input {
+				width: 320rpx;
+				height: 48rpx;
+				font-size: 36rpx;
+				font-weight: bold;
+				color: #303133;
+			}
+
+			.nick-placeholder {
+				color: #909399;
+				font-weight: normal;
+			}
+
+			.avatar-public-row {
+				display: flex;
+				align-items: center;
+				margin-top: 12rpx;
+				gap: 16rpx;
+			}
 		}
 
 		.user-icon {}
@@ -515,7 +1018,17 @@
 		margin-top: 60rpx;
 
 		// background-color: #4CD964;
-		.grid-item {
+		.ai-badge {
+	margin-left: 20rpx;
+	width: 60rpx;
+	height: 60rpx;
+	border-radius: 14rpx;
+	background: linear-gradient(135deg, #4f7cfe, #7a5cfe);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.grid-item {
 			// padding: 20rpx auto;
 			width: 346rpx;
 			height: 150rpx;
@@ -525,6 +1038,17 @@
 	}
 
 	.rank-save {
+
+		.points-card {
+			margin-top: 20rpx;
+			background: linear-gradient(135deg, #fff7e6, #fff1cc);
+			border-radius: 20rpx;
+			padding: 26rpx 30rpx;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			border: 2rpx solid #ffe0a3;
+		}
 
 		.item {
 			margin-top: 20rpx;
@@ -539,18 +1063,94 @@
 		}
 	}
 
+		.menu-section {
+		margin-top: 30rpx;
+	}
+	.menu-item {
+		padding: 30rpx;
+		background: #ffffff;
+		border-radius: 20rpx;
+	}
 	.ont-toke {
-		position: absolute;
-		left: 40rpx;
-		right: 40rpx;
-		// width: 100%;
-		// padding: auto 40rpx;
-		// text-align: center;
-		// font-size: 24rpx;
-		// color: #353535;
-		// background-color: #4CD964;
-		// margin-top: ;
-		// size="24" color="#353535";
+		margin: 60rpx 40rpx 30rpx;
+		text-align: center;
+	}
 
+	/* 手机号用途说明弹层 */
+	.myph-mask {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.55);
+		z-index: 999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.myph-card {
+		width: 620rpx;
+		background: #ffffff;
+		border-radius: 24rpx;
+		padding: 40rpx 36rpx 32rpx;
+		box-sizing: border-box;
+	}
+
+	.myph-title {
+		font-size: 34rpx;
+		font-weight: bold;
+		color: #333333;
+		text-align: center;
+		margin-bottom: 24rpx;
+	}
+
+	.myph-body {
+		max-height: 480rpx;
+		overflow-y: auto;
+	}
+
+	.myph-item {
+		font-size: 27rpx;
+		color: #555555;
+		line-height: 1.7;
+		margin-bottom: 14rpx;
+	}
+
+	.myph-btns {
+		display: flex;
+		align-items: center;
+		margin-top: 30rpx;
+	}
+
+	.myph-btn {
+		flex: 1;
+		height: 84rpx;
+		line-height: 84rpx;
+		text-align: center;
+		font-size: 30rpx;
+		border-radius: 44rpx;
+	}
+
+	.myph-no {
+		color: #999999;
+		background: #f2f2f2;
+		margin-right: 24rpx;
+	}
+
+	.myph-open {
+		color: #ffffff;
+		background: #07c160;
+		padding: 0;
+		margin: 0;
+		border: none;
+	}
+
+	.myph-open::after {
+		border: none;
 	}
 </style>
+
+
+

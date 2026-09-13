@@ -1,0 +1,26 @@
+{
+  "name": "studyroom-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "uview-ui": "2.0.29"
+  },
+  "devDependencies": {
+    "@dcloudio/uni-app": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/uni-cli-i18n": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/uni-cli-shared": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/uni-mp-vue": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/uni-mp-weixin": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/uni-template-compiler": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/vue-cli-plugin-uni": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/webpack-uni-mp-loader": "2.0.2-alpha-5000120260205002",
+    "@dcloudio/webpack-uni-pages-loader": "2.0.2-alpha-5000120260205002",
+    "@vue/cli-plugin-babel": "~4.2.0",
+    "@vue/cli-service": "~4.2.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "node-sass": "^4.14.1",
+    "sass-loader": "^8.0.2",
+    "vue-template-compiler": ">= 2.6.11 < 2.7",
+    "webpack": "^4.46.0"
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "bsonType": "object",
+  "required": ["jobnumber", "faceStatus", "registerStatus", "deleteStatus", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "userId": {
+      "bsonType": "string",
+      "description": "wx_user document ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "WeChat openid"
+    },
+    "userName": {
+      "bsonType": "string",
+      "description": "Access control user name"
+    },
+    "phone": {
+      "bsonType": "string",
+      "description": "User phone number"
+    },
+    "fileID": {
+      "bsonType": "string",
+      "description": "uniCloud storage fileID for face image"
+    },
+    "picBase64": {
+      "bsonType": "string",
+      "description": "JPG base64 for access control device"
+    },
+    "jobnumber": {
+      "bsonType": "int",
+      "description": "Unique job number on access device"
+    },
+    "faceStatus": {
+      "bsonType": "string",
+      "enum": ["pending", "valid", "invalid"],
+      "description": "Face profile status"
+    },
+    "registerStatus": {
+      "bsonType": "string",
+      "enum": ["none", "pending", "success", "failed"],
+      "description": "Latest register command status"
+    },
+    "deleteStatus": {
+      "bsonType": "string",
+      "enum": ["none", "pending", "success", "failed"],
+      "description": "Latest delete command status"
+    },
+    "lastRegisterCommandId": {
+      "bsonType": "string",
+      "description": "Latest REGISTER_FACE command ID"
+    },
+    "lastDeleteCommandId": {
+      "bsonType": "string",
+      "description": "Latest DELETE_FACE command ID"
+    },
+    "validity": {
+      "bsonType": "long",
+      "description": "Access validity timestamp in seconds, 0 means permanent"
+    },
+    "remark": {
+      "bsonType": "string",
+      "description": "Remark"
+    },
+    "createTime": {
+      "bsonType": "long",
+      "description": "Create timestamp in milliseconds"
+    },
+    "updateTime": {
+      "bsonType": "long",
+      "description": "Update timestamp in milliseconds"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "userId_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "userId",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    },
+    {
+      "IndexName": "openid_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "openid",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    },
+    {
+      "IndexName": "jobnumber_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "jobnumber",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

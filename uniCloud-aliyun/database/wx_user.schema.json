@@ -1,0 +1,74 @@
+{
+  "bsonType": "object",
+  "required": ["openid", "status", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "WeChat mini-program openid"
+    },
+    "unionid": {
+      "bsonType": "string",
+      "description": "WeChat unionid"
+    },
+    "sessionKey": {
+      "bsonType": "string",
+      "description": "WeChat session key, cloud function only"
+    },
+    "nickName": {
+      "bsonType": "string",
+      "description": "WeChat nickname"
+    },
+    "avatarUrl": {
+      "bsonType": "string",
+      "description": "WeChat avatar URL"
+    },
+    "gender": {
+      "bsonType": "int",
+      "description": "Gender from WeChat profile"
+    },
+    "phone": {
+      "bsonType": "string",
+      "description": "User phone number"
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["enabled", "disabled"],
+      "description": "User status"
+    },
+    "lastLoginTime": {
+      "bsonType": "long",
+      "description": "Last login timestamp in milliseconds"
+    },
+    "createTime": {
+      "bsonType": "long",
+      "description": "Create timestamp in milliseconds"
+    },
+    "updateTime": {
+      "bsonType": "long",
+      "description": "Update timestamp in milliseconds"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "openid_unique",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "openid",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": true
+      }
+    }
+  ]
+}

@@ -5,15 +5,15 @@
 				<view style="display: flex;justify-content: space-between;align-items: center;">
 					<!-- 店名 -->
 					<view style="display: flex;justify-content: flex-start;align-items: center;">
-						<u-icon name="/other_pages_mine/static/store.png" size="35"></u-icon>
+						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/store.png" size="35"></u-icon>
 						<view style="margin-left: 20rpx;">
-							<u--text :bold="false" size="30" color="#303133" :text="item.roomName" align="center" />
+							<u-text :bold="false" size="30" color="#303133" :text="item.roomName" align="center" />
 						</view>
 					</view>
 					<!-- 订单状态 -->
 					<view class="pay-status">
 						<view>
-							<u-icon name="/other_pages_mine/static/stamps.png" size="28"></u-icon>
+							<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/stamps.png" size="28"></u-icon>
 						</view>
 						<view style="margin-left: 10rpx;">
 							<my-pay-status :status="item.payStatus"></my-pay-status>
@@ -23,22 +23,22 @@
 				<!-- 座位区域 -->
 				<view style="display: flex;justify-content: flex-start;align-items: center; margin-top: 40rpx;">
 					<view>
-						<u-icon name="/other_pages_mine/static/seat.png" size="35"></u-icon>
+						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/seat.png" size="35"></u-icon>
 					</view>
 					<view style="margin-left: 20rpx;">
-						<u--text :bold="false" size="30" color="#303133"
+						<u-text :bold="false" size="30" color="#303133"
 							:text="item.areaName+'·'+'舒适区'+'·'+item.seatNum" align="center" />
 					</view>
 				</view>
 				<!-- 订座时间 -->
 				<view style="display: flex;justify-content: flex-start; margin-top: 40rpx;">
 					<view>
-						<u-icon name="/other_pages_mine/static/clock.png" size="35"></u-icon>
+						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages_mine/static/clock.png" size="35"></u-icon>
 					</view>
 					<view style="margin-left: 20rpx; width: 100%;display: flex;">
-						<u--text :bold="false" size="30" color="#303133" text="订座时间" align="left" />
+						<u-text :bold="false" size="30" color="#303133" text="订座时间" align="left" />
 						<view style="margin-left: 10rpx;">
-							<u--text :bold="false" size="30" color="#303133" :text="item.startTime" align="left" />
+							<u-text :bold="false" size="30" color="#303133" :text="item.startTime" align="left" />
 						</view>
 					</view>
 				</view>
@@ -88,22 +88,29 @@
 		},
 		methods: {
 			cancel(item) {
-				console.log("cancel", item)
+				// 按时订座取消: 请到「我的-预约记录」操作(该组件为历史遗留, 实际列表入口已迁移)
+				uni.$u.toast('取消预约请到「我的-预约记录」')
 			},
 			async advance(item) {
 				console.log("advance", item)
-				const params = {
-					orderId: item.orderId,
-					hours: item.hours
-				}
-				const {
-					date: res
-				} = await orderSeatConsumed(params, {
-					custom: {
-						auth: true
+				try {
+					const params = {
+						orderId: item.orderId,
+						hours: item.hours
 					}
-				})
-				console.log(res)
+					const {
+						date: res
+					} = await orderSeatConsumed(params, {
+						custom: {
+							auth: true,
+							catch: true
+						}
+					})
+					console.log(res)
+					uni.$u.toast('已提前开始，座位灯已打开')
+				} catch (e) {
+					uni.$u.toast((e && e.msg) || '操作失败，请稍后再试')
+				}
 			},
 			loadmore() {
 				if (this.status == 'loadmore') this.$emit('loadmore');

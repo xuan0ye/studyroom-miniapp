@@ -1,0 +1,59 @@
+{
+  "bsonType": "object",
+  "required": ["balance", "createTime", "updateTime"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Document ID"
+    },
+    "userId": {
+      "bsonType": "string",
+      "description": "wx_user document ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "WeChat openid"
+    },
+    "balance": {
+      "bsonType": "double",
+      "description": "User balance points"
+    },
+    "createTime": {
+      "bsonType": "long"
+    },
+    "updateTime": {
+      "bsonType": "long"
+    }
+  },
+  "index": [
+    {
+      "IndexName": "userId_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "userId",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    },
+    {
+      "IndexName": "openid_idx",
+      "MgoKeySchema": {
+        "MgoIndexKeys": [
+          {
+            "Name": "openid",
+            "Direction": "1"
+          }
+        ],
+        "MgoIsUnique": false
+      }
+    }
+  ]
+}

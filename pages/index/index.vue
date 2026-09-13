@@ -1,65 +1,122 @@
 <template>
 	<page-meta :page-style="'overflow:'+(show?'hidden':'visible')">
-		<view>
+		<view class="page-bg">
 			<view>
-				<my-navbar leftText=" " :storeName="store.roomName" :custom="true" :autoBack="false" :show="show"
+				<my-navbar leftText=" " :storeName="store.roomName || ''" :custom="true" :autoBack="false" :show="show"
 					@changeShow="changeShow">
 				</my-navbar>
 			</view>
 			<view style="padding: 40rpx 40rpx 30rpx 40rpx;">
-				<u-swiper :list="swiperList" keyName="url" indicator indicatorMode="line" circular height="280"
-					radius="16">
-				</u-swiper>
+				<swiper class="home-swiper" indicator-dots indicator-color="rgba(255,255,255,0.4)"
+					indicator-active-color="#ffffff" circular autoplay interval="4000" duration="500">
+					<swiper-item v-for="(banner, bi) in swiperList" :key="bi">
+						<image class="home-swiper-img" :src="banner.url" mode="scaleToFill"></image>
+					</swiper-item>
+				</swiper>
 			</view>
 			<view>
 				<my-index-card></my-index-card>
 			</view>
-			<!-- 二维码 -->
+			<!-- 今日预约座位灯光控制 -->
+			<view v-if="todayBooking" class="today-light-card">
+				<view class="today-light-left">
+					<view class="today-light-title">
+						<u-icon name="server-man" color="#35a5ed" size="34"></u-icon>
+						<u-text :bold="true" size="30" color="#333" text="今日预约灯光" style="margin-left: 10rpx;" />
+					</view>
+					<view style="margin-top: 8rpx;">
+						<u-text size="26" color="#666" :text="'座位：' + (todayBooking.seatNum ? todayBooking.seatNum + ' 号' : '未选座位')" />
+					</view>
+					<view style="margin-top: 4rpx;" v-if="todayBooking.checkInTime">
+						<u-text size="24" color="#4facfe" :text="'已签到：' + fmtTime(todayBooking.checkInTime)" />
+					</view>
+				</view>
+				<view class="today-light-right">
+					<u-button size="small" type="primary" color="#35a5ed" shape="circle"
+						:loading="lightLoading === 'on'" @click="lightOn" text="开灯" />
+					<u-button size="small" type="default" shape="circle"
+						:loading="lightLoading === 'off'" @click="lightOff" text="关灯" style="margin-left: 16rpx;" />
+				</view>
+			</view>
+			<!-- 我的周期卡(周卡/月卡: 开卡日期/到期日期/锁座状态) -->
+			<view v-if="myCards.length > 0" class="my-card-status">
+				<view class="my-card-status-title">
+					<u-icon name="gift" color="#e6a23c" size="30"></u-icon>
+					<u-text :bold="true" size="28" color="#333" text="我的周期卡" style="margin-left: 8rpx;" />
+				</view>
+				<view v-for="(mc, mi) in myCards" :key="mi" class="my-card-status-item">
+					<view class="my-card-status-left">
+						<u-text :bold="true" size="28" color="#35a5ed" :text="mc.cardTitle" />
+						<view style="margin-top: 6rpx;">
+							<u-text size="24" color="#666" :text="'开卡：' + mc.startLabel + '　到期：' + mc.expiryLabel" />
+						</view>
+						<view style="margin-top: 4rpx;">
+							<u-text size="22" color="#999" :text="'剩余 ' + mc.remainDays + ' 天'" />
+						</view>
+					</view>
+					<view class="my-card-status-right">
+						<u-tag v-if="mc.locked" text="已锁座" type="warning" size="mini" />
+						<u-tag v-else text="可用" type="success" size="mini" />
+					</view>
+				</view>
+				<view class="my-card-status-tip">
+					<u-text size="22" color="#9a9a9a" text="周卡/月卡一次预约即锁定整个周期，无需每天重复预约；到店在下方开灯即可" />
+				</view>
+			</view>
+			<!-- 门禁人脸入口 -->
 			<view>
 				<my-index-ER></my-index-ER>
 			</view>
-			<!-- 热门活动 -->
-			<view class="content-hot">
+			<!-- 热门活动(内容由后台「门店管理→热门活动」维护, 无数据则整块不显示) -->
+			<view class="content-hot" v-if="promoList.length > 0">
 				<view>
-					<u--text :bold="true" size="24" color="#6a6a6a" :selectable="false" text="热门活动" />
+					<u-text :bold="true" size="24" color="#6a6a6a" :selectable="false" text="热门活动" />
 				</view>
-				<view class="hot-list" v-for="(index) in 5" :key="index">
+				<view class="hot-list" v-for="(item, pi) in promoList" :key="pi">
 					<view style="margin-bottom: 40rpx;">
-						<view class="hot-list-item">
+						<view class="hot-list-item" @click="toPromo(item)">
 							<u-row gutter="6rpx">
 								<u-col span="8">
 									<view style="margin-left: 20rpx; margin-top: 30rpx;">
-										<u--text :bold="true" size="36" color="#0f0f0f" text="考证2人拼团专享(200+20小时经济型)" />
+										<u-text :bold="true" size="36" color="#0f0f0f" :text="item.title" />
 									</view>
-									<view style="margin-right: 320rpx; margin-top: 40rpx;">
-										<u-icon name="arrow-right" size="28" label="2人团" labelColor="#3e3e3e"
-											labelSize="24" labelPos="left"></u-icon>
+									<view style="margin-left: 20rpx; margin-top: 12rpx;" v-if="item.subtitle">
+										<u-text size="24" color="#8a8a8a" :text="item.subtitle" />
+									</view>
+									<view style="display: flex; align-items: center; margin-left: 20rpx; margin-top: 18rpx;">
+										<u-text :bold="true" size="40" color="#fe2c55" :text="'¥' + fmtPrice(item.price)" />
+										<u-text size="22" color="#8a8a8a" :text="item.priceUnit || ''"
+											style="margin-left: 6rpx;" />
+										<u-text v-if="item.originalPrice" size="22" color="#bbbbbb"
+											:text="'原价 ¥' + fmtPrice(item.originalPrice)"
+											style="margin-left: 14rpx; text-decoration: line-through;" />
 									</view>
 								</u-col>
 								<u-col span="4">
-									<view style="margin-right: 100rpx;">
-										<u--image src="/static/index/vipCard.png" mode="aspectFit" height="210rpx"
-											width="210rpx"></u--image>
+									<view style="margin-right: 40rpx;">
+										<u-image v-if="item.imageUrl" :src="item.imageUrl" mode="aspectFit"
+											height="210rpx" width="210rpx"></u-image>
 									</view>
 								</u-col>
 							</u-row>
 						</view>
-						<view>
-							<u-icon name="arrow-rightward" size="36" label="查看详情" :bold="true" labelSize="26"
-								labelColor="#000000" labelPos="left"></u-icon>
+						<view style="display: flex; align-items: center;" @click="toPromo(item)">
+							<u-icon name="arrow-rightward" size="32" label="查看详情" :bold="true" labelSize="26"
+								labelColor="#35a5ed" labelPos="left"></u-icon>
+							<view v-if="item.tag" style="margin-left: 16rpx;">
+								<u-tag :text="item.tag" type="warning" size="mini" />
+							</view>
 						</view>
 					</view>
 				</view>
 
 			</view>
 			<my-tabbar></my-tabbar>
+			<view style="max-height: 300rpx;">
+				<my-action-sheet :show="show" :list="storeList" @closeShow="closeShow"></my-action-sheet>
+			</view>
 		</view>
 	</page-meta>
-
-	<view style="max-height: 300rpx;">
-		<my-action-sheet :show="show" :list="storeList" @closeShow="closeShow"></my-action-sheet>
-	</view>
-
 
 </template>
 
@@ -69,25 +126,80 @@
 	} from 'common/request/api/hitokoto.js'
 	import {
 		mapState,
+		mapMutations
 	} from 'vuex'
 	import {
 		getSwiper,
+		getPromoList,
 		getStore,
 		getBalance,
-		getCard
+		getCard,
+		getMyCard,
+		myTodaySeat,
+		seatPowerOn,
+		seatPowerOff
 	} from '@/config/api.js'
+	import { judgeDeviceResult } from '@/utils/device-result.js'
 	export default {
 		data() {
 			return {
 				swiperList: [],
 				show: false,
-				storeList: []
+				storeList: [],
+				todayBooking: null,
+				lightLoading: '',
+				myCards: [],
+				promoList: []
 			}
 		},
 		computed: {
 			...mapState(['oneToke', 'store'])
 		},
 		methods: {
+			...mapMutations(['setIndex']),
+			toCardPromo() {
+				uni.navigateTo({
+					url: "/other_pages/recharge-card/recharge-card"
+				})
+			},
+			// 首页热门活动(后台可编辑): 取上架中的活动, 无数据则整块不显示
+			async loadPromo() {
+				try {
+					const res = await getPromoList({}, { custom: { catch: true, toast: false } })
+					const list = (res && res.data) ? res.data : []
+					this.promoList = (list || []).filter(function(p) {
+						return p && p.title
+					})
+				} catch (e) {
+					this.promoList = []
+				}
+			},
+			// 价格展示: 799 -> 799, 799.5 -> 799.50
+			fmtPrice(v) {
+				if (v === null || v === undefined || v === '') return ''
+				const n = Number(v)
+				if (isNaN(n)) return String(v)
+				return n % 1 === 0 ? String(n) : n.toFixed(2)
+			},
+			// 点击活动: 优先用后台配置的跳转路径, 没配则去卡券套餐
+			toPromo(item) {
+				const url = item && item.linkUrl ? String(item.linkUrl) : ''
+				if (!url) {
+					this.toCardPromo()
+					return
+				}
+				const tabBars = ['/pages/index/index', '/pages/order/order', '/pages/mine/mine']
+				if (tabBars.indexOf(url) !== -1) {
+					uni.switchTab({ url: url })
+				} else {
+					uni.navigateTo({
+						url: url,
+						fail: () => {
+							uni.$u.toast('该活动暂未开放，请联系客服')
+						}
+					})
+				}
+			},
 			changeShow() {
 				this.show = true
 				console.log(" index show = " + this.show)
@@ -98,14 +210,52 @@
 				console.log("index closeShow " + this.show)
 			},
 			async setSwiper() {
-				const {
-					data: res
-				} = await getSwiper({
-					custom: {
-						auth: true
+				try {
+					const {
+						data: res
+					} = await getSwiper({}, {
+						custom: {
+							auth: true,
+							catch: true
+						}
+					})
+					// 后端有轮播图则用之; 否则回退到本地静态轮播图(微信上传的三张宣传图)
+					if (res && res.length > 0) {
+						// 轮播图 url 三种情况:
+						// 1. /upload/... 后端本地存储 → 拼服务器域名
+						// 2. /static/... 小程序包内静态资源 → 保持原样(绝对不可拼域名!)
+						// 3. http(s) 云OSS 绝对地址 → 保持原样
+						this.swiperList = res.map(function(item) {
+							var u = item.url
+							if (u && u.indexOf('/upload/') === 0) {
+								// 按当前环境拼根地址(dev=本地后端, 真机/生产=线上), 否则 dev 模式加载线上404
+								var host = 'https://api.dayousuoan.top'
+								try {
+									host = require('@/config/config.js').currentHost()
+								} catch (e) {}
+								item.url = host + u
+							}
+							return item
+						})
+					} else {
+						this.swiperList = [{
+							url: 'https://api.dayousuoan.top/upload/appstatic/index/banner1.jpg'
+						}, {
+							url: 'https://api.dayousuoan.top/upload/appstatic/index/banner2.jpg'
+						}, {
+							url: 'https://api.dayousuoan.top/upload/appstatic/index/banner3.jpg'
+						}]
 					}
-				})
-				this.swiperList = res
+				} catch (e) {
+					// 接口失败也用本地图兜底
+					this.swiperList = [{
+						url: 'https://api.dayousuoan.top/upload/appstatic/index/banner1.jpg'
+					}, {
+						url: 'https://api.dayousuoan.top/upload/appstatic/index/banner2.jpg'
+					}, {
+						url: 'https://api.dayousuoan.top/upload/appstatic/index/banner3.jpg'
+					}]
+				}
 			},
 			async getStoreList() {
 				const {
@@ -135,7 +285,7 @@
 					const {
 						data: balance
 					} = await
-					getBalance({
+					getBalance({}, {
 						custom: {
 							auth: true,
 							catch: true
@@ -143,7 +293,7 @@
 					})
 					const {
 						data: card
-					} = await getCard({
+					} = await getCard({}, {
 						custom: {
 							auth: true,
 							catch: true
@@ -159,11 +309,123 @@
 						uni.clearStorageSync()
 					}
 				}
+			},
+			// 加载今天待使用的预约(用于主页开灯按钮)
+			async loadTodayBooking() {
+				// 用"今日座位"接口: 覆盖周卡/月卡锁座期(锁座期间每天显示灯控按钮) + 今日预约
+				try {
+					const res = await myTodaySeat({ custom: { auth: true, catch: true, toast: false } })
+					const list = (res && res.data) ? res.data : []
+					if (list && list.length > 0) {
+						this.todayBooking = list[0]
+					} else {
+						this.todayBooking = null
+					}
+				} catch (e) {
+					// 接口不可用回退旧逻辑(按天预约当天)
+					try {
+						const { data: list2 } = await uni.$u.http.get('/api/wx/daily/record', {
+							custom: { auth: true, catch: true, toast: false }
+						})
+						var d = new Date()
+						var pad = function(n) { return n < 10 ? '0' + n : '' + n }
+						var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+						var arr = list2 || []
+						var found = null
+						for (var i = 0; i < arr.length; i++) {
+							var it = arr[i]
+							if (it.status === 0 && it.seatId && String(it.consumptionDate || '').indexOf(today) === 0) {
+								found = it
+								break
+							}
+						}
+						this.todayBooking = found
+					} catch (e2) {
+						this.todayBooking = null
+					}
+				}
+			},
+			fmtTime(t) {
+				if (!t) return ''
+				const dt = new Date(String(t).replace(/-/g, '/'))
+				const pad = function(n) { return n < 10 ? '0' + n : '' + n }
+				return pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + ':' + pad(dt.getSeconds())
+			},
+			async lightOn() {
+				if (!this.todayBooking) return
+				this.lightLoading = 'on'
+				try {
+					const res = await seatPowerOn({ seatId: this.todayBooking.seatId }, { custom: { auth: true, catch: true } })
+					const r = judgeDeviceResult(res, '座位灯已开启')
+					uni.$u.toast(r.msg)
+					if (r.ok) {
+						this.loadTodayBooking()
+					}
+				} catch (e) {
+					uni.$u.toast((e && e.msg) || '开灯失败，请稍后再试')
+				} finally {
+					this.lightLoading = ''
+				}
+			},
+			async lightOff() {
+				if (!this.todayBooking) return
+				this.lightLoading = 'off'
+				try {
+					const res = await seatPowerOff({ seatId: this.todayBooking.seatId }, { custom: { auth: true, catch: true } })
+					const r = judgeDeviceResult(res, '座位灯已关闭')
+					uni.$u.toast(r.msg)
+				} catch (e) {
+					uni.$u.toast((e && e.msg) || '关灯失败，请稍后再试')
+				} finally {
+					this.lightLoading = ''
+				}
+			},
+			// 加载我的周期卡(周卡/月卡)信息: 开卡日期/到期日期/锁座状态
+			async loadMyCards() {
+				try {
+					const res = await getMyCard({}, {
+						custom: { auth: true, catch: true, toast: false }
+					})
+					const list = res && res.data ? res.data : res
+					if (!list || !list.length) {
+						this.myCards = []
+						return
+					}
+					const now = new Date()
+					this.myCards = list.filter(function(c) {
+						// 周卡(term 7)或月卡/长期卡(term>=30), 未过期
+						if (!c.card || !c.expiryTime) return false
+						const term = parseInt(c.card.term)
+						if (term !== 7 && term < 30) return false
+						const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
+						return expiry > now && !c.consumed
+					}).map(function(c) {
+						const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
+						const start = c.createTime ? new Date(String(c.createTime).replace(/-/g, '/')) : now
+						const remainDays = Math.max(0, Math.ceil((expiry - now) / 86400000))
+						let locked = false
+						if (c.lockSeatId && c.lockEndTime) {
+							const lockEnd = new Date(String(c.lockEndTime).replace(/-/g, '/'))
+							locked = lockEnd > now
+						}
+						return {
+							id: c.id,
+							cardTitle: c.card.cardTitle || '周期卡',
+							startLabel: (start.getMonth() + 1) + '月' + start.getDate() + '日',
+							expiryLabel: (expiry.getMonth() + 1) + '月' + expiry.getDate() + '日',
+							remainDays: remainDays,
+							locked: locked
+						}
+					})
+				} catch (e) {
+					this.myCards = []
+				}
 			}
 
 		},
 		onLoad() {
 			this.setSwiper()
+			this.loadPromo()
 			this.getStoreList()
 			const store = uni.getStorageSync('store')
 			if (store != null && store != '') {
@@ -173,10 +435,13 @@
 
 		},
 		onShow() {
+			this.setIndex(0)
 			const isLogin = uni.getStorageSync('isLogin')
 			if (isLogin == true) {
 				this.getAccount()
+				this.loadMyCards()
 			}
+			this.loadTodayBooking()
 			const store = uni.getStorageSync('store')
 			if (store != null && store != '') {
 				console.log('onShow store---', store)
@@ -187,7 +452,9 @@
 </script>
 
 <style lang="scss">
-	page {
+	// 页面背景由根容器设置（避免标签选择器在组件wxss中不被允许的警告）
+	.page-bg {
+		min-height: 100vh;
 		background-color: $u-bg-color;
 	}
 
@@ -211,5 +478,84 @@
 	.item-image {
 		// position: absolute;
 
+	}
+
+	.today-light-card {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 0 40rpx;
+		margin-top: 30rpx;
+		padding: 26rpx 30rpx;
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		box-shadow: 0 6rpx 20rpx rgba(53, 165, 237, 0.12);
+	}
+
+	// 我的周期卡卡片
+	.my-card-status {
+		margin: 0 40rpx;
+		margin-top: 30rpx;
+		padding: 26rpx 30rpx;
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		box-shadow: 0 6rpx 20rpx rgba(230, 162, 60, 0.12);
+	}
+
+	.my-card-status-title {
+		display: flex;
+		align-items: center;
+		margin-bottom: 18rpx;
+	}
+
+	.my-card-status-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 16rpx 0;
+		border-top: 2rpx solid #f5f5f5;
+	}
+
+	.my-card-status-left {
+		flex: 1;
+		margin-right: 16rpx;
+	}
+
+	.my-card-status-right {
+		flex-shrink: 0;
+	}
+
+	.my-card-status-tip {
+		margin-top: 14rpx;
+		padding-top: 14rpx;
+		border-top: 2rpx solid #f5f5f5;
+	}
+
+	.home-swiper {
+		width: 100%;
+		height: 480rpx;
+		border-radius: 16rpx;
+		overflow: hidden;
+	}
+
+	.home-swiper-img {
+		width: 100%;
+		height: 480rpx;
+		border-radius: 16rpx;
+	}
+
+	.today-light-left {
+		flex: 1;
+	}
+
+	.today-light-title {
+		display: flex;
+		align-items: center;
+	}
+
+	.today-light-right {
+		display: flex;
+		align-items: center;
+		margin-left: 20rpx;
 	}
 </style>

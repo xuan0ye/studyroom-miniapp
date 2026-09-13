@@ -1,87 +1,56 @@
 <template>
 	<view style="position: relative;">
-		<my-navbar title="预 定 位 置" :custom="false" :autoBack="false"></my-navbar>
+		<my-navbar title="预约选座" :custom="false" :autoBack="false"></my-navbar>
 		<view class="container">
 			<view>
 				<view>
-					<u--text :bold="true" size="26" color="#c2c2c2" text="预约门店" />
+					<u-text :bold="false" size="26" color="#c2c2c2" text="预约门店" />
 				</view>
 				<view style="display:flex; flex-direction:row; margin-top: 20rpx;">
 					<view style="width: 305rpx;">
-						<u--text lines="1" :bold="true" size="36" color="#5b5b5b" :text="store.roomName" />
-					</view>
-					<view style="margin-top: 10rpx;padding: auto 0;">
-						<u--text :bold="true" size="26" color="#5b5b5b" :text="'('+time+')'" />
+						<u-text lines="1" :bold="true" size="36" color="#5b5b5b" :text="store.roomName" />
 					</view>
 					<view style="margin-top: 10rpx; margin-left: 20rpx;" @click="changeShowStore()">
-						<u--text :bold="true" size="26" color="#35a5ed" text="切换门店" />
+						<u-text :bold="true" size="26" color="#35a5ed" text="切换门店" />
 					</view>
 				</view>
 			</view>
 			<u-divider></u-divider>
 			<view style="margin-top: 40rpx;">
-				<u--text :bold="false" size="26" color="#c2c2c2" text="预约开始时间" />
-				<view style="margin: 0 auto;text-align: center; width: 100%;margin-top: 20rpx;">
-					<image src="/static/order/time.png"></image>
-				</view>
-				<view style="margin: auto 40rpx;">
-					<u-button color="#35a5ed" size="large" @click="clickButton">
-						<u-icon name="calendar" color="#ffffff" size="55" label="选择预约时间" :bold="false" labelSize="36"
-							labelColor="#ffffff" labelPos="right"></u-icon>
-					</u-button>
-				</view>
+				<u-text :bold="false" size="26" color="#c2c2c2" text="预约日期" />
+				<picker mode="date" :start="minDate" :end="maxDate" :value="selectDate" @change="onDateChange">
+					<view style="display:flex; align-items:center; margin-top: 20rpx;">
+						<u-icon name="calendar" color="#35a5ed" size="45" />
+						<view style="margin-left: 16rpx;">
+							<u-text :bold="true" size="34" color="#35a5ed" :text="dateLabel" />
+						</view>
+						<u-icon name="arrow-down" color="#35a5ed" size="30" style="margin-left: 10rpx;" />
+					</view>
+				</picker>
+			</view>
+			<u-divider></u-divider>
+			<view style="display:flex; justify-content: space-between; align-items:center; margin-top: 30rpx;">
+				<u-text :bold="false" size="26" color="#c2c2c2" text="日卡价格" />
+				<u-text :bold="true" size="34" color="#ff6600" :text="'¥' + (cardPrice || dailyPrice)" />
+			</view>
+			<view style="display:flex; justify-content: space-between; align-items:center; margin-top: 20rpx;">
+				<u-text :bold="false" size="26" color="#c2c2c2" text="我的日卡" />
+				<u-text :bold="true" size="32" color="#35a5ed" :text="availableCards + ' 张可用'" />
+			</view>
+			<view style="margin-top: 20rpx;">
+				<u-text :bold="false" size="22" color="#9a9a9a" text="24小时营业，预约当天全天不限时长使用" />
 			</view>
 		</view>
-		<view class="ont-toke" style="margin: auto 40rpx;margin-top: 20rpx;">
-			<u--text :bold="false" size="24" color="#353535" align="center" :text='oneToke' />
+		<view style="margin: 40rpx;">
+			<u-button color="#35a5ed" size="large" @click="toSeat">开始选座</u-button>
+		</view>
+		<view style="margin-top: 20rpx;">
+			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
 		</view>
 		<my-tabbar></my-tabbar>
 
-
-
 		<view style="max-height: 300rpx;">
 			<my-action-sheet :list="storeList" :show="showStore" @closeShow="closeShowStore()"></my-action-sheet>
-		</view>
-
-
-		<view>
-			<u-popup :show="showTime" @close="close" round="40">
-				<view style="margin: 20rpx;">
-					<view style="margin: 20rpx auto;">
-						<u--text :bold="true" size="34" align="center" text="选择开始时间"></u--text>
-					</view>
-					<view>
-						<u-tabs :current="current" :list="dayList" @click="tabsClick" lineWidth="140rpx"
-							lineHeight="4rpx" :activeStyle="activeStyle" :itemStyle="itemStyle" :scrollable="false"
-							:inactiveStyle="inactiveStyle"></u-tabs>
-						<scroll-view scroll-y="true"
-							style="max-height: 600rpx;border-top: 2rpx solid #d5d5d5;border-bottom: 2rpx solid #d5d5d5;">
-							<u-cell-group>
-								<!-- <view v-if="current"> -->
-								<u-cell v-for="(list,indexList) in timeList" :key="indexList">
-									<view slot="title" class="time">
-										<view class="time-item" v-for="(array,indexArray) in list" :key="indexArray">
-											<u-tag size="large" :text="array.time" borderColor="#ffffff" shape="circle"
-												:plain="array.checked" color="#000000" type="primary" :name="indexArray"
-												@click="radioClick(array)">
-											</u-tag>
-										</view>
-									</view>
-								</u-cell>
-							</u-cell-group>
-						</scroll-view>
-						<view style="width: 100%;margin: 40rpx auto;">
-							<view style="text-align: center;">
-								<span style="font-size: 28rpx; color: #555555;">已选时间：</span>
-								<span style="font-size: 34rpx; color: #35a5ed;">{{orderDay}}-{{orderTime}}</span>
-							</view>
-							<view style="margin-top: 40rpx;">
-								<u-button text="确 认" type="primary" size="large" @click="toSeat"></u-button>
-							</view>
-						</view>
-					</view>
-				</view>
-			</u-popup>
 		</view>
 	</view>
 </template>
@@ -89,218 +58,155 @@
 <script>
 	import {
 		mapState,
+		mapMutations
 	} from 'vuex'
+	import {
+		dailyConfig,
+		getMyCard
+	} from '@/config/api.js'
 	export default {
 		data() {
 			return {
-				time: '08:00-23:00',
 				showStore: false,
-				showTime: false,
-				inactiveStyle: {
-					fontSize: '30rpx'
-				},
-				itemStyle: {
-					textAlign: 'center',
-					width: '140rpx',
-					paddingBottom: ' 20rpx',
-					lineHeight: '50rpx'
-				},
-				activeStyle: {
-					color: '#35a5ed',
-					fontWeight: 'bold'
-				},
-				dayList: [],
-				timeList: [],
-				allTimeList: [],
-				orderTime: '',
-				orderDay: '',
-				orderTimestamp: '',
-				current: 0
+				dateLabel: '',
+				selectDate: '',
+				minDate: '',
+				maxDate: '',
+				dailyPrice: '20.00',
+			cardPrice: '',
+				availableCards: 0
 			}
 		},
 		methods: {
+			...mapMutations(['setIndex']),
 			closeShowStore() {
 				this.showStore = false
 			},
 			changeShowStore() {
 				this.showStore = true;
 			},
-			closeShowTime() {
-				this.showTime = false;
-			},
-			clickButton() {
-				this.showTime = true;
-				this.setDayList()
-				this.getTimeList(this.dayList[0].timestamp)
-				this.orderDay = uni.$u.date(this.dayList[0].timestamp, 'mm月dd日')
-				console.log(this.orderDay)
-			},
-			// 时间标签
-			radioClick(array) {
-				const that = this
-				console.log(array)
-
-				that.timeList.forEach(function(list, index) {
-					list.forEach(function(item, key) {
-						item.checked = array.time === item.time ? false : true
-						if (array.time === item.time) {
-							that.orderTime = uni.$u.date(item.timestamp, 'hh:MM')
-							that.orderTimestamp = item.timestamp
+			async loadDailyConfig() {
+				try {
+					const {
+						data: config
+					} = await dailyConfig({
+						roomId: this.store.roomId
+					}, {
+						custom: {
+							auth: true,
+							catch: true
 						}
 					})
-				})
-
-			},
-			getTimeList(timestamp) {
-
-				console.log(uni.$u.date(timestamp, 'yyyy-mm-dd hh:MM:ss'))
-				console.log(this.dayList)
-				var time = new Date(Date.now()); //设置的时间
-				time.setSeconds(0)
-				var day = new Date(timestamp); //切换tabs的日期
-				this.timeList = []
-
-				if (day.getDate() != time.getDate()) {
-					console.log("非当天预约时间")
-					time = new Date(timestamp)
-					time.setSeconds(0)
-					time.setHours(8)
-					time.setMinutes(0)
-					while (time.getHours() <= 22 && time.getMinutes() !== 30) {
-						var a = [];
-						for (var i = 0; i < 4; i++) {
-							if (time.getHours() == 23 && time.getMinutes() == 0) break;
-							a.push({
-								time: uni.$u.date(time.valueOf(), 'hh:MM'),
-								checked: true,
-								timestamp: time.valueOf(),
-							})
-
-							time.setMinutes(time.getMinutes() + 30)
+					if (config && config.length > 0) {
+						const priceConf = config.find(function(c) { return c.configKey === 'daily_price' })
+						if (priceConf) {
+							this.dailyPrice = (parseInt(priceConf.configValue) / 100).toFixed(2)
 						}
-						this.timeList.push(a)
-						if (time.getHours() == 22 && time.getMinutes() == 30) break;
 					}
-				} else {
-					console.log("当天预约时间")
-					console.log(time.toLocaleString())
-					if (time.getMinutes() <= 30 && time.getMinutes() >= 0) {
-						time.setMinutes(30)
-					} else {
-						time.setMinutes(0)
-						time.setHours(time.getHours() + 1)
-					}
-					if (time.getHours() < 8) {
-						time.setHours(8)
-						time.setMinutes(0)
-					}
-					while (time.getHours() <= 22) {
-						var a = [];
-						for (var i = 0; i < 4; i++) {
-							if (time.getHours() == 23 && time.getMinutes() == 0) break;
-							a.push({
-								time: uni.$u.date(time.valueOf(), 'hh:MM'),
-								checked: true,
-								timestamp: time.valueOf(),
-							})
-							// console.log(time.toLocaleString())
-							time.setMinutes(time.getMinutes() + 30)
+				} catch (e) {}
+			},
+			async loadDayCards() {
+				try {
+					const {
+						data: card
+					} = await getMyCard({}, {
+						custom: {
+							auth: true,
+							catch: true
 						}
-						this.timeList.push(a)
-						if (time.getHours() == 22 && time.getMinutes() == 30) break;
+					})
+					if (card && card.length > 0) {
+						const now = new Date()
+						// 可用卡(日卡 term=1 / 周卡 term=7, 未过期未使用)
+						var validCards = card.filter(function(c) {
+							return c.card && (c.card.term === 1 || c.card.term === 7) && !c.consumed && c.expiryTime &&
+								new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+						})
+						this.availableCards = validCards.length
+						// 日卡价格只从日卡(term=1)取, 防止周卡价冒充日卡价展示
+						if (!this.cardPrice && validCards.length > 0) {
+							var dayCard = validCards.find(function(c) { return c.card && c.card.term === 1 }) || validCards[0]
+							if (dayCard && dayCard.card && dayCard.card.price) {
+								this.cardPrice = (Math.round(parseFloat(dayCard.card.price) * 100) / 100).toFixed(2)
+							}
+						}
 					}
-				}
-				console.log(this.timeList)
-
+				} catch (e) {}
 			},
-			// tabs 切换
-			tabsClick(item) {
-				this.current = item.index
-				console.log(item, item.timestamp)
-				this.getTimeList(item.timestamp)
-				this.orderDay = uni.$u.date(item.timestamp, 'mm月dd日')
-			},
-			setDayList() {
+			onDateChange(e) {
+				this.selectDate = e.detail.value
 				var weekArr = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-				var day = new Date(Date.now())
-				this.dayList = []
-				if (day.getHours() != 22 && day.getMinutes() != 30) {
-					this.dayList.push({
-						index: 0,
-						name: uni.$u.date(day.valueOf(), 'mm月dd日') + '\n' + weekArr[day.getDay()],
-						timestamp: day.valueOf()
-					})
-				}
-				day.setHours(day.getHours() + 24)
-				this.dayList.push({
-					index: 1,
-					name: uni.$u.date(day.valueOf(), 'mm月dd日') + "\n" + weekArr[day.getDay()],
-					timestamp: day.valueOf()
-				})
-				day.setHours(day.getHours() + 24)
-				this.dayList.push({
-					index: 2,
-					name: uni.$u.date(day.valueOf(), 'mm月dd日') + "\n" + weekArr[day.getDay()],
-					timestamp: day.valueOf()
-				})
-
-
-			},
-			close() {
-				this.current = 0
-				this.showTime = false
+				var d = new Date(this.selectDate.replace(/-/g, '/'))
+				var label = (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekArr[d.getDay()]
+				this.dateLabel = (this.selectDate === this.minDate ? '今天 ' : '') + label
 			},
 			toSeat() {
-				if (this.orderTime == '') {
-					uni.showToast({
-						title: "请选择预约时间",
-						icon: 'error'
-					})
-				} else {
-					uni.$u.route('/other_pages/seat/seat', {
-						orderTimestamp: this.orderTimestamp,
-						storeName: this.store.roomName,
-						time: this.time,
-						orderDay: this.orderDay
-					});
+				var weekArr = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+				var today = new Date()
+				today.setHours(0, 0, 0, 0)
+				var start = new Date(today)
+				var end = new Date(today)
+				if (this.selectDate) {
+					var sel = new Date(this.selectDate.replace(/-/g, '/'))
+					sel.setHours(0, 0, 0, 0)
+					start = new Date(sel)
+					end = new Date(sel)
 				}
-
+				// 自习室24小时营业: 全天 00:00 - 次日 00:00
+				start.setHours(0, 0, 0, 0)
+				end.setDate(end.getDate() + 1)
+				end.setHours(0, 0, 0, 0)
+				uni.$u.route('/other_pages/check-seat/check-seat', {
+					mode: 'daily',
+					startTimestamp: start.getTime(),
+					endTimestamp: end.getTime(),
+					dateLabel: this.dateLabel,
+					dateStr: this.selectDate || this.minDate
+				})
 			}
-
 		},
 		computed: {
 			...mapState(['oneToke', 'store', 'storeList'])
 		},
-		onReady() {},
-		onShow() {}
+		onLoad() {
+			var weekArr = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			var today = new Date()
+			var pad = function(n) { return n < 10 ? '0' + n : '' + n }
+			var todayStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate())
+			var max = new Date(today.getTime() + 30 * 24 * 3600 * 1000)
+			this.minDate = todayStr
+			this.maxDate = max.getFullYear() + '-' + pad(max.getMonth() + 1) + '-' + pad(max.getDate())
+			this.selectDate = todayStr
+			this.dateLabel = '今天 ' + (today.getMonth() + 1) + '月' + today.getDate() + '日 ' + weekArr[today.getDay()]
+		},
+		onShow() {
+			this.setIndex(1)
+			const isLogin = uni.getStorageSync('isLogin')
+			if (isLogin !== true && isLogin !== 'true' && isLogin !== 1) {
+				// 未登录: 引导登录后再预约
+				uni.showModal({
+					title: '请先登录',
+					content: '预约座位需要先登录，是否前往「我的」页登录？',
+					confirmText: '去登录',
+					success: (r) => {
+						if (r.confirm) {
+							uni.switchTab({ url: '/pages/mine/mine' })
+						}
+					}
+				})
+				return
+			}
+			this.loadDailyConfig()
+			this.loadDayCards()
+		}
 	}
 </script>
 
 <style lang="scss">
 	.container {
 		background-color: #FFFFFF;
-		// width: 100%;
 		margin: 40rpx;
 		padding: 40rpx;
 		border-radius: 20rpx;
-	}
-
-	.ont-toke {
-		// position: absolute;
-		// width: 100%;
-		// background-color: #4CD964;
-		// margin-top: ;
-	}
-
-	.time {
-		// margin: auto 40rpx;
-		margin-left: 40rpx;
-		padding: auto 140rpx;
-
-		.time-item {
-			display: inline-block;
-			margin: 20rpx auto;
-			font-size: 34rpx;
-		}
 	}
 </style>

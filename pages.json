@@ -38,13 +38,6 @@
 					}
 				},
 				{
-					"path": "seat/seat",
-					"style": {
-						"navigationBarTitleText": "",
-						"enablePullDownRefresh": false
-					}
-				},
-				{
 					"path": "check-seat/check-seat",
 					"style": {
 						"navigationBarTitleText": "",
@@ -73,17 +66,87 @@
 					}
 				},
 				{
-					"path": "recharge-locker/recharge-locker",
+					"path": "device-control/device-control",
 					"style": {
 						"navigationBarTitleText": "",
 						"enablePullDownRefresh": false
 					}
 				},
 				{
-					"path": "device-control/device-control",
+					"path": "ai/ai-chat",
+					"style": {
+						"navigationBarTitleText": "AI 学伴",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "ai/ai-kb",
+					"style": {
+						"navigationBarTitleText": "AI 知识库",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+				"path": "daily-checkout/daily-checkout",
 					"style": {
 						"navigationBarTitleText": "",
 						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "access/face-enroll",
+					"style": {
+						"navigationBarTitleText": "门禁人脸",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "feedback/feedback",
+					"style": {
+						"navigationBarTitleText": "意见反馈",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "points/points",
+					"style": {
+						"navigationBarTitleText": "我的积分",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "points/exchange",
+					"style": {
+						"navigationBarTitleText": "积分商城",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "points/recover",
+					"style": {
+						"navigationBarTitleText": "补签申请",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "agreement/agreement",
+					"style": {
+						"navigationBarTitleText": "协议与政策",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "douyin/verify",
+					"style": {
+						"navigationBarTitleText": "团购核销",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "douyin/records",
+					"style": {
+						"navigationBarTitleText": "核销记录",
+						"enablePullDownRefresh": true
 					}
 				}
 			]
@@ -116,6 +179,20 @@
 					"path": "learn_record/learn_record",
 					"style": {
 						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "my_bookings/my_bookings",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "card-redeem/card-redeem",
+					"style": {
+						"navigationBarTitleText": "双人卡兑换",
 						"enablePullDownRefresh": false
 					}
 				}
