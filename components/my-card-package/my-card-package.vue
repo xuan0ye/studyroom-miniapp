@@ -10,7 +10,7 @@
 							<view class="card-overlay"></view>
 							<view class="card-info-top">
 						<u-text :bold="true" size="40" color="#3d3d3d" :text="item.card.cardTitle" />
-						<view class="card-tag card-tag-{{statusType}}">{{ statusLabel }}</view>
+						<view :class="'card-tag card-tag-' + statusType">{{ statusLabel }}</view>
 							</view>
 							<view class="card-info-bottom">
 								<u-text size="24" color="#4d4d4d" :text="'有效期至 ' + item.expiryTime" />
