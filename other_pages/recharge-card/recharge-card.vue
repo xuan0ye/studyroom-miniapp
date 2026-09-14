@@ -6,8 +6,8 @@
 		<view>
 			<view class="uni-margin-wrap">
 				<swiper class="swiper" :next-margin="next+'rpx'" :previous-margin="previous+'rpx'"
-					:indicator-dots="false" :autoplay="autoplay" :interval="interval" :duration="duration"
-					@change="change">
+					:current="currentIndex" :indicator-dots="false" :autoplay="autoplay" :interval="interval"
+					:duration="duration" @change="change">
 					<swiper-item v-for="(item,index) in list" :key="index">
 						<view class="swiper-item" :style="{ backgroundImage: 'url(' + getCardBg(item, index) + ')' }">
 							<view class="card-overlay"></view>
@@ -141,6 +141,10 @@
 				previous: -20,
 				list: [],
 				currentIndex: 0,
+				// 从首页热门活动等入口跳进来时, 直接定位到指定卡券(不再从第一张开始翻)
+				targetCardId: '',
+				targetPartySize: 0,
+				targetTitle: '',
 				showSlideHint: true,
 				cardBgs: [
 					'/static/index/card-day.jpg',
@@ -176,21 +180,48 @@
 		methods: {
 			change(e) {
 				var current = e.detail.current
-				const that = this
 				this.card = this.list[current]
 				this.currentIndex = current
 				this.showSlideHint = false
-				console.log(current)
+				this.applyMargins(current)
+			},
+			// 第一张/最后一张的左右露边参数(供 change 与跳转定位共用)
+			applyMargins(current) {
+				const that = this
 				if (current == 0) {
 					setTimeout(function() {
 						that.next = 80
 						that.previous = -20
 					}, 500);
-
 				} else if (current == this.list.length - 1) {
 					this.next = 58
 					this.previous = 40
 				}
+			},
+			// 定位目标卡券: 依次按 卡券ID -> 套餐人数(双人卡) -> 卡名关键字 匹配
+			findTargetIndex(list) {
+				if (!list || !list.length) return 0
+				var i
+				if (this.targetCardId) {
+					for (i = 0; i < list.length; i++) {
+						if (String(list[i].id) === String(this.targetCardId)) return i
+					}
+				}
+				if (this.targetPartySize >= 2) {
+					// 先精确匹配人数(双人/三人), 再退化为"任意多人套餐"
+					for (i = 0; i < list.length; i++) {
+						if ((list[i].partySize || 1) === this.targetPartySize) return i
+					}
+					for (i = 0; i < list.length; i++) {
+						if ((list[i].partySize || 1) >= 2) return i
+					}
+				}
+				if (this.targetTitle) {
+					for (i = 0; i < list.length; i++) {
+						if (list[i].cardTitle && list[i].cardTitle.indexOf(this.targetTitle) !== -1) return i
+					}
+				}
+				return 0
 			},
 			getCardBg(item, index) {
 				var freq = item.frequency || 0
@@ -348,9 +379,13 @@
 					data: res
 				} = await cardList()
 				console.log('获取优惠卡列表', res)
-				this.list = res
-				if (res.length > 0) {
-					this.card = res[0]
+				this.list = res || []
+				if (this.list.length > 0) {
+					// 带参进入时直接定位到目标卡(如首页热门活动 → 双人卡), 否则停在第 1 张
+					var idx = this.findTargetIndex(this.list)
+					this.currentIndex = idx
+					this.card = this.list[idx]
+					this.applyMargins(idx)
 				}
 			},
 			async loadWallet() {
@@ -364,10 +399,18 @@
 				} catch (e) { this.points = 0 }
 			}
 		},
-		onLoad() {
+		onLoad(options) {
+			// 入口参数(可选): ?cardId=卡券ID / ?partySize=2(双人卡) / ?title=卡名关键字
+			var opt = options || {}
+			this.targetCardId = opt.cardId ? String(opt.cardId) : ''
+			this.targetPartySize = opt.partySize ? parseInt(opt.partySize) : 0
+			try {
+				this.targetTitle = opt.title ? decodeURIComponent(opt.title) : ''
+			} catch (e) {
+				this.targetTitle = opt.title || ''
+			}
 			this.getCardList()
 			this.loadWallet()
-			console.log(this.card)
 		}
 	}
 </script>
