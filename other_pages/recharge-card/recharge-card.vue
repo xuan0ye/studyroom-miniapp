@@ -12,10 +12,8 @@
 						<view class="swiper-item" :style="{ backgroundImage: 'url(' + getCardBg(item, index) + ')' }">
 							<view class="card-overlay"></view>
 							<view class="card-info-top">
-								<u-text :bold="true" size="40" color="#3d3d3d" :text="item.cardTitle" />
-								<view style="margin-top: 12rpx;">
-									<u-tag :text="getCardTag(item)" type="primary" size="mini" shape="circle" />
-								</view>
+						<u-text :bold="true" size="40" color="#3d3d3d" :text="item.cardTitle" />
+						<view class="card-tag" v-if="getCardTag(item)">{{ getCardTag(item) }}</view>
 							</view>
 							<view class="card-info-bottom">
 								<view class="card-price">
@@ -106,6 +104,9 @@
 		<view class="card-button">
 			<u-button text="确定支付" size="large" type="primary" @click="pay"></u-button>
 		</view>
+		<view style="margin-top: 20rpx; padding-bottom: 10rpx; display: flex; justify-content: center;">
+			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
+		</view>
 	</view>
 </template>
 
@@ -117,7 +118,11 @@
 		getBalance,
 		myPoints
 	} from '@/config/api.js'
+	import { mapState } from 'vuex'
 	export default {
+		computed: {
+			...mapState(['oneToke'])
+		},
 		data() {
 			return {
 				// card: { 参数说明
@@ -140,8 +145,12 @@
 				cardBgs: [
 					'/static/index/card-day.jpg',
 					'/static/index/card-week.jpg',
+					'/static/index/card-biweek.jpg',
 					'/static/index/card-month.jpg',
-					'/static/index/card-year.jpg'
+					'/static/index/card-season.jpg',
+					'/static/index/card-hundred.jpg',
+					'/static/index/card-year.jpg',
+					'/static/index/card-duo.jpg'
 				],
 				tabs: [{
 					name: '卡券内容'
@@ -185,17 +194,26 @@
 			},
 			getCardBg(item, index) {
 				var freq = item.frequency || 0
-				if (freq <= 1) return this.cardBgs[0]
-				if (freq <= 7) return this.cardBgs[1]
-				if (freq <= 30) return this.cardBgs[2]
-				return this.cardBgs[3]
+				var party = item.partySize || 1
+				if (party >= 2) return this.cardBgs[7]   // 双人卡
+				if (freq <= 1) return this.cardBgs[0]      // 日卡
+				if (freq <= 7) return this.cardBgs[1]      // 周卡
+				if (freq <= 14) return this.cardBgs[2]     // 双周卡
+				if (freq <= 30) return this.cardBgs[3]     // 月卡
+				if (freq <= 90) return this.cardBgs[4]     // 季卡
+				if (freq <= 100) return this.cardBgs[5]    // 百天卡
+				return this.cardBgs[6]                   // 年卡
 			},
 			getCardTag(item) {
 				var freq = item.frequency || 0
+				var party = item.partySize || 1
+				if (party >= 2) return '双人同行'
 				if (freq <= 1) return '体验推荐'
 				if (freq <= 7) return '备考首选'
+				if (freq <= 14) return '稳步进阶'
 				if (freq <= 30) return '热门选择'
 				if (freq <= 90) return '季卡专享'
+				if (freq <= 100) return '百日冲刺'
 				return '极致性价比'
 			},
 			tabsClick(index) {
@@ -393,6 +411,17 @@
 		top: 36rpx;
 		left: 36rpx;
 		z-index: 2;
+	}
+
+	.card-tag {
+		display: inline-block;
+		margin-top: 12rpx;
+		padding: 4rpx 20rpx;
+		font-size: 22rpx;
+		color: #2f8fe0;
+		background: rgba(47, 143, 224, 0.12);
+		border-radius: 20rpx;
+		line-height: 1.6;
 	}
 
 	.card-info-bottom {

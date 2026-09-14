@@ -33,7 +33,7 @@
 				</view>
 			</view>
 			<!-- 一言区域 -->
-			<view style="margin-top: 40rpx; margin-bottom: 350rpx;">
+			<view style="margin-top: 40rpx; margin-bottom: 350rpx; display: flex; justify-content: center;">
 				<u-text :bold="false" size="24" color="#353535" align="center" :text='oneToke' />
 			</view>
 			<!-- 底部固定浮动区域 -->

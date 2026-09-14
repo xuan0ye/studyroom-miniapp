@@ -110,8 +110,11 @@
 					</view>
 				</view>
 
-			</view>
-			<my-tabbar></my-tabbar>
+		</view>
+		<view style="margin-top: 20rpx; padding-bottom: 10rpx; display: flex; justify-content: center;">
+			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
+		</view>
+		<my-tabbar></my-tabbar>
 			<view style="max-height: 300rpx;">
 				<my-action-sheet :show="show" :list="storeList" @closeShow="closeShow"></my-action-sheet>
 			</view>

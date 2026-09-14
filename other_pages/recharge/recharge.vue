@@ -148,6 +148,9 @@
 			</view>
 
 		</view>
+		<view style="padding-bottom: 10rpx; display: flex; justify-content: center;">
+			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
+		</view>
 	</view>
 </template>
 

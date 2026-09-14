@@ -1073,7 +1073,8 @@
 	}
 	.ont-toke {
 		margin: 60rpx 40rpx 30rpx;
-		text-align: center;
+		display: flex;
+		justify-content: center;
 	}
 
 	/* 手机号用途说明弹层 */

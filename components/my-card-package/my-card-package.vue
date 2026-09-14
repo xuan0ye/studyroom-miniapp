@@ -9,10 +9,8 @@
 						<view class="swiper-item" :style="{ backgroundImage: 'url(' + getCardBg(item, index) + ')' }">
 							<view class="card-overlay"></view>
 							<view class="card-info-top">
-								<u-text :bold="true" size="40" color="#3d3d3d" :text="item.card.cardTitle" />
-								<view style="margin-top: 12rpx;">
-									<u-tag :text="statusLabel" :type="statusType" size="mini" shape="circle" />
-								</view>
+						<u-text :bold="true" size="40" color="#3d3d3d" :text="item.card.cardTitle" />
+						<view class="card-tag card-tag-{{statusType}}">{{ statusLabel }}</view>
 							</view>
 							<view class="card-info-bottom">
 								<u-text size="24" color="#4d4d4d" :text="'有效期至 ' + item.expiryTime" />
@@ -110,8 +108,12 @@
 				cardBgs: [
 					'/static/index/card-day.jpg',
 					'/static/index/card-week.jpg',
+					'/static/index/card-biweek.jpg',
 					'/static/index/card-month.jpg',
-					'/static/index/card-year.jpg'
+					'/static/index/card-season.jpg',
+					'/static/index/card-hundred.jpg',
+					'/static/index/card-year.jpg',
+					'/static/index/card-duo.jpg'
 				],
 				activeStyle: {
 					color: '#35a5ed',
@@ -185,10 +187,15 @@
 			},
 			getCardBg(item, index) {
 				var freq = (item.card && item.card.frequency) || 0
-				if (freq <= 1) return this.cardBgs[0]
-				if (freq <= 7) return this.cardBgs[1]
-				if (freq <= 30) return this.cardBgs[2]
-				return this.cardBgs[3]
+				var party = (item.card && item.card.partySize) || 1
+				if (party >= 2) return this.cardBgs[7]   // 双人卡
+				if (freq <= 1) return this.cardBgs[0]      // 日卡
+				if (freq <= 7) return this.cardBgs[1]      // 周卡
+				if (freq <= 14) return this.cardBgs[2]     // 双周卡
+				if (freq <= 30) return this.cardBgs[3]     // 月卡
+				if (freq <= 90) return this.cardBgs[4]     // 季卡
+				if (freq <= 100) return this.cardBgs[5]    // 百天卡
+				return this.cardBgs[6]                   // 年卡
 			},
 			tabsClick(index) {
 				console.log(index)
@@ -324,6 +331,30 @@
 		top: 36rpx;
 		left: 36rpx;
 		z-index: 2;
+	}
+
+	.card-tag {
+		display: inline-block;
+		margin-top: 12rpx;
+		padding: 4rpx 20rpx;
+		font-size: 22rpx;
+		border-radius: 20rpx;
+		line-height: 1.6;
+	}
+
+	.card-tag-success {
+		color: #67c23a;
+		background: rgba(103, 194, 58, 0.12);
+	}
+
+	.card-tag-error {
+		color: #f56c6c;
+		background: rgba(245, 108, 108, 0.12);
+	}
+
+	.card-tag-info {
+		color: #909399;
+		background: rgba(144, 147, 153, 0.12);
 	}
 
 	.card-info-bottom {

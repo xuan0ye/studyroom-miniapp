@@ -44,7 +44,7 @@
 		<view style="margin: 40rpx;">
 			<u-button color="#35a5ed" size="large" @click="toSeat">开始选座</u-button>
 		</view>
-		<view style="margin-top: 20rpx;">
+		<view style="margin-top: 20rpx; display: flex; justify-content: center;">
 			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
 		</view>
 		<my-tabbar></my-tabbar>
