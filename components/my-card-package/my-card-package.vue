@@ -3,25 +3,34 @@
 		<view>
 			<view class="uni-margin-wrap">
 				<swiper class="swiper" :next-margin="next+'rpx'" :previous-margin="previous+'rpx'"
-					:indicator-dots="indicatorDots" :autoplay="autoplay" :interval="interval" :duration="duration"
+					:indicator-dots="false" :autoplay="autoplay" :interval="interval" :duration="duration"
 					@change="change">
 					<swiper-item v-for="(item,index) in list" :key="index">
-						<view class="swiper-item">
-							<view style="color: aliceblue;position: absolute;top: 40rpx;left: 30rpx;">
-								<p>{{item.card.cardTitle}}</p>
-							<view style="position: absolute;top: 60rpx;left: 30rpx;">
-								<u-tag :text="statusLabel" :type="statusType" size="mini" />
+						<view class="swiper-item" :style="{ backgroundImage: 'url(' + getCardBg(item, index) + ')' }">
+							<view class="card-overlay"></view>
+							<view class="card-info-top">
+								<u-text :bold="true" size="40" color="#3d3d3d" :text="item.card.cardTitle" />
+								<view style="margin-top: 12rpx;">
+									<u-tag :text="statusLabel" :type="statusType" size="mini" shape="circle" />
+								</view>
 							</view>
-							</view>
-							<view
-								style="color: aliceblue;position: absolute;bottom: 40rpx;right: 30rpx;font-size: 24rpx;">
-								<p>有效期至：{{item.expiryTime}}</p>
+							<view class="card-info-bottom">
+								<u-text size="24" color="#4d4d4d" :text="'有效期至 ' + item.expiryTime" />
 							</view>
 						</view>
 					</swiper-item>
 				</swiper>
 			</view>
 		</view>
+		<!-- 滑动指示器 -->
+		<view class="slide-indicator" v-if="list.length > 1">
+				<view v-for="(item, index) in list" :key="index"
+					:class="['indicator-dot', { 'indicator-dot-active': index === currentIndex }]">
+				</view>
+			</view>
+			<view class="slide-hint" v-if="list.length > 1 && showSlideHint">
+				<u-text size="22" color="#999" text="← 左右滑动查看卡种 →" />
+			</view>
 		<!-- 卡券内容区域 -->
 		<view style="margin-top: 20rpx;background-color: #ffffff">
 			<view style="border-bottom: 2rpx solid #e5e5e5;">
@@ -97,6 +106,13 @@
 				leaving: false,
 				unlocking: false,
 				currentIndex: 0,
+				showSlideHint: true,
+				cardBgs: [
+					'/static/index/card-day.jpg',
+					'/static/index/card-week.jpg',
+					'/static/index/card-month.jpg',
+					'/static/index/card-year.jpg'
+				],
 				activeStyle: {
 					color: '#35a5ed',
 					fontWeight: 'bold'
@@ -151,6 +167,7 @@
 			change(e) {
 				var current = e.detail.current
 				this.currentIndex = current
+				this.showSlideHint = false
 				const that = this
 				this.card = this.list[current].card
 				this.consumed = !!(this.list[current] && this.list[current].consumed)
@@ -165,6 +182,13 @@
 					this.next = 58
 					this.previous = 40
 				}
+			},
+			getCardBg(item, index) {
+				var freq = (item.card && item.card.frequency) || 0
+				if (freq <= 1) return this.cardBgs[0]
+				if (freq <= 7) return this.cardBgs[1]
+				if (freq <= 30) return this.cardBgs[2]
+				return this.cardBgs[3]
 			},
 			tabsClick(index) {
 				console.log(index)
@@ -265,22 +289,76 @@
 	.uni-margin-wrap {
 		width: 690rpx;
 		width: 100%;
-		margin: 40rpx auto;
+		margin: 20rpx auto;
 		margin-left: 40rpx;
 	}
 
 	.swiper {
-		height: 300rpx;
+		height: 360rpx;
 	}
 
 	.swiper-item {
 		display: block;
 		position: relative;
-		height: 300rpx;
-		background-image: linear-gradient(135deg, #25B0FF 0%, #5178FC 45%, #655FFF 100%);
+		height: 360rpx;
 		background-size: cover;
-		border-radius: 15rpx;
+		background-position: right center;
+		border-radius: 24rpx;
 		margin-left: 20rpx;
+		overflow: hidden;
+		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
+	}
+
+	.card-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.18) 100%);
+		border-radius: 24rpx;
+	}
+
+	.card-info-top {
+		position: absolute;
+		top: 36rpx;
+		left: 36rpx;
+		z-index: 2;
+	}
+
+	.card-info-bottom {
+		position: absolute;
+		bottom: 36rpx;
+		left: 36rpx;
+		z-index: 2;
+	}
+
+	.slide-indicator {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin-top: 16rpx;
+	}
+
+	.indicator-dot {
+		width: 12rpx;
+		height: 12rpx;
+		border-radius: 50%;
+		background-color: #d0d0d0;
+		margin: 0 8rpx;
+		transition: all 0.3s ease;
+	}
+
+	.indicator-dot-active {
+		width: 32rpx;
+		border-radius: 6rpx;
+		background-color: #35a5ed;
+	}
+
+	.slide-hint {
+		text-align: center;
+		margin-top: 8rpx;
+		padding-bottom: 4rpx;
 	}
 
 	.card-comm {
