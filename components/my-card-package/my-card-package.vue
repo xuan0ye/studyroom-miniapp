@@ -6,7 +6,9 @@
 					:indicator-dots="false" :autoplay="autoplay" :interval="interval" :duration="duration"
 					@change="change">
 					<swiper-item v-for="(item,index) in list" :key="index">
-						<view class="swiper-item" :style="{ backgroundImage: 'url(' + getCardBg(item, index) + ')' }">
+						<view class="swiper-item">
+							<!-- 卡面背景必须用 image 组件: 小程序 WXSS 的 background-image 不支持本地图片路径 -->
+							<image class="card-bg-img" :src="getCardBg(item, index)" mode="aspectFill" />
 							<view class="card-overlay"></view>
 							<view class="card-info-top">
 						<u-text :bold="true" size="40" color="#3d3d3d" :text="item.card.cardTitle" />
@@ -308,12 +310,19 @@
 		display: block;
 		position: relative;
 		height: 360rpx;
-		background-size: cover;
-		background-position: right center;
 		border-radius: 24rpx;
 		margin-left: 20rpx;
 		overflow: hidden;
 		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
+	}
+
+	/* 卡面背景图(image 组件, aspectFill 保持铺满不变形) */
+	.card-bg-img {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
 	}
 
 	.card-overlay {
