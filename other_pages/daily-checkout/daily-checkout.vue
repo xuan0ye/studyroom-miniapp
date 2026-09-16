@@ -53,9 +53,34 @@
 				</view>
 			</view>
 
+			<!-- 选择座位: 没有从选座页带座位号进来时(如"预约今天"入口)在本页选座 -->
+			<view class="section" v-if="!routeSeat">
+				<u-text :bold="true" size="28" color="#333"
+					:text="selectedWindowDays() > 1 ? ('选择座位（该卡需连续锁定 ' + selectedWindowDays() + ' 天，只显示整段空着的座位）') : '选择座位'" />
+				<view v-if="areaTip" style="margin-top: 8rpx;">
+					<u-text size="24" color="#e6a23c" :text="areaTip" />
+				</view>
+				<view style="margin-top: 10rpx;">
+					<u-text size="24" color="#999" :text="seatId ? ('已选：' + seatNum + ' 号座位') : '请点击下方座位号选择'" />
+				</view>
+				<view v-if="seatLoading" style="margin-top: 16rpx;">
+					<u-text size="24" color="#999" text="正在查询可用座位..." />
+				</view>
+				<view v-else-if="visibleSeats.length === 0" style="margin-top: 16rpx;">
+					<u-text size="24" color="#999" text="该时段暂无可选座位，请更换日期或联系门店" />
+				</view>
+				<view v-else class="seat-grid" style="margin-top: 16rpx;">
+					<view class="seat-chip" :class="{ 'seat-chip-on': seatId === s.seatId }" v-for="s in visibleSeats"
+						:key="s.seatId" @click="pickSeat(s)">
+						<u-text size="26" :bold="seatId === s.seatId"
+							:color="seatId === s.seatId ? '#ffffff' : '#333333'" :text="s.seatNum + '号'" />
+					</view>
+				</view>
+			</view>
+
 			<view style="margin-top: 40rpx;">
 				<u-button type="primary" color="#35a5ed" size="large" 
-					:disabled="!selectedCardId" :loading="submitting"
+					:disabled="!selectedCardId || !seatId" :loading="submitting"
 					@click="confirmCheckout" text="确认预约" />
 			</view>
 
@@ -66,7 +91,7 @@
 </template>
 
 <script>
-	import { dailyConfig, dailyOrder, getMyCard } from '@/config/api.js'
+	import { dailyConfig, dailyOrder, getMyCard, getSeat } from '@/config/api.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	export default {
 		data() {
@@ -80,7 +105,10 @@
 				dailyPrice: 2000,
 				dayCards: [],
 				selectedCardId: null,
-				submitting: false
+				submitting: false,
+				routeSeat: false,      // 从选座页带座位号进来时为 true(不再显示选座区)
+				seatList: [],          // 可选座位(已按所选卡券的锁定时长过滤)
+				seatLoading: false
 			}
 		},
 		methods: {
@@ -122,6 +150,7 @@
 								cardTitle: c.card.cardTitle,
 								remainDays: remainDays,
 								term: c.card.term,
+								cardType: c.card.cardType,
 								unused: unused,
 								locked: locked,
 								lockEndLabel: lockEndLabel,
@@ -135,21 +164,123 @@
 			},
 			selectCard(card) {
 				if (card.locked) {
-					uni.showToast({ title: '该周卡已锁座，期间无需重复预约', icon: 'none' })
+					uni.showToast({ title: '该卡已锁座，期间无需重复预约', icon: 'none' })
 					return
 				}
 				this.selectedCardId = card.id
+				// 卡券锁定时长不同 => 可选座位不同(周卡锁7天/月卡锁31天, 必须整段都空着), 重新拉一次可选座位
+				this.reloadSeats()
+			},
+			// 当前门店(优先路由参数, 其次全局 store / 本地缓存)
+			currentStore() {
+				try {
+					const st = this.$store && this.$store.state ? this.$store.state.store : null
+					if (st && st.roomId) return st
+				} catch (e) {}
+				try {
+					const raw = uni.getStorageSync('store')
+					if (raw) return typeof raw === 'string' ? JSON.parse(raw) : raw
+				} catch (e) {}
+				return {}
+			},
+			bookingDateObj() {
+				const s = (this.dateStr || '').replace(/-/g, '/')
+				const d = s ? new Date(s) : new Date()
+				if (isNaN(d.getTime())) return new Date()
+				d.setHours(0, 0, 0, 0)
+				return d
+			},
+			// 所选卡券占用的天数(日卡1天, 周卡7天, 月卡31天...)
+			selectedWindowDays() {
+				const sel = this.dayCards.find(c => c.id === this.selectedCardId)
+				if (!sel) return 1
+				const d = parseInt(sel.remainDays) || 1
+				return d >= 7 ? d : 1
+			},
+			// 卡券区域限制: 0=不限 / 1=仅沉浸区(16-19号) / 2=禁止沉浸区
+			selectedAreaLimit() {
+				const sel = this.dayCards.find(c => c.id === this.selectedCardId)
+				if (!sel) return 0
+				const t = sel.cardType != null ? sel.cardType : (sel.card ? sel.card.cardType : 0)
+				return t == null ? 0 : t
+			},
+			isImmersion(seat) {
+				if (!seat) return false
+				if (seat.seatArea === 1 || seat.seatArea === '1') return true
+				return !!(seat.areaName && String(seat.areaName).indexOf('沉浸') >= 0)
+			},
+			// 按卡券区域限制过滤后的可选座位
+			visibleSeats() {
+				const limit = this.selectedAreaLimit()
+				const that = this
+				return (this.seatList || []).filter(function(s) {
+					const immer = that.isImmersion(s)
+					if (limit === 2 && immer) return false
+					if (limit === 1 && !immer) return false
+					return true
+				})
+			},
+			areaTip() {
+				const limit = this.selectedAreaLimit()
+				if (limit === 2) return '该卡不可预约沉浸区(16-19号)座位，已为你过滤'
+				if (limit === 1) return '该卡仅限沉浸区(16-19号)座位，已为你过滤'
+				return ''
+			},
+			async loadSeats() {
+				const roomId = this.roomId || this.currentStore().roomId
+				if (!roomId) {
+					this.seatList = []
+					return
+				}
+				const days = this.selectedWindowDays()
+				const base = this.bookingDateObj()
+				const start = uni.$u.date(base, 'yyyy-mm-dd') + ' 00:00:00'
+				const end = uni.$u.date(new Date(base.getTime() + days * 86400000), 'yyyy-mm-dd') + ' 00:00:00'
+				this.seatLoading = true
+				try {
+					const { data: res } = await getSeat({ roomId: roomId, startTime: start, endTime: end },
+						{ custom: { auth: true, catch: true } })
+					const all = ((res && res.seatCom) || []).concat((res && res.seatVip) || [])
+					this.seatList = all.filter(function(s) {
+						return s && s.status === true      // 整段窗口都空着的座位才可选
+					}).map(function(s) {
+						return { seatId: s.seatId, seatNum: s.seatNum, areaName: s.areaName || '', seatArea: s.seatArea }
+					}).sort(function(a, b) {
+						return (a.seatNum || 0) - (b.seatNum || 0)
+					})
+				} catch (e) {
+					this.seatList = []
+				} finally {
+					this.seatLoading = false
+				}
+			},
+			reloadSeats() {
+				this.loadSeats().then(() => {
+					if (!this.seatId) return
+					const stillOk = (this.visibleSeats || []).some(s => s.seatId === this.seatId)
+					if (!stillOk) {
+						this.seatId = ''
+						this.seatNum = ''
+						uni.showToast({ title: '已按该卡时长重新筛选座位，请重新选择', icon: 'none' })
+					}
+				})
+			},
+			pickSeat(seat) {
+				this.seatId = seat.seatId
+				this.seatNum = seat.seatNum
 			},
 			async confirmCheckout() {
-				if (!this.selectedCardId) return uni.showToast({ title: '请选择日卡', icon: 'none' })
+				if (!this.selectedCardId) return uni.showToast({ title: '请选择卡券', icon: 'none' })
+				if (!this.seatId) return uni.showToast({ title: '请选择座位', icon: 'none' })
 				// 双重校验: 选中的卡若已锁座则拦截(防止列表刷新后状态变化)
 				const sel = this.dayCards.find(c => c.id === this.selectedCardId)
 				if (sel && sel.locked) {
-					return uni.showToast({ title: '该周卡已锁座，期间无需重复预约', icon: 'none' })
+					return uni.showToast({ title: '该卡已锁座，期间无需重复预约', icon: 'none' })
 				}
 				this.submitting = true
 				try {
-					await dailyOrder({ seatId: this.seatId, cardUserId: this.selectedCardId, consumptionDate: this.dateStr + ' 00:00:00' }, { custom: { auth: true, catch: true } })
+					const day = uni.$u.date(this.bookingDateObj(), 'yyyy-mm-dd')
+					await dailyOrder({ seatId: this.seatId, cardUserId: this.selectedCardId, consumptionDate: day + ' 00:00:00' }, { custom: { auth: true, catch: true } })
 					uni.showToast({ title: '预约成功', icon: 'success' })
 					// 预约成功: 提示座位开关在首页(主页有今日座位开灯按钮, 预约今天的可直接开灯)
 					setTimeout(function() {
@@ -186,6 +317,7 @@
 		onShow() {
 			this.loadConfig()
 			this.loadDayCards()
+			this.loadSeats()
 		},
 		onLoad(options) {
 			this.seatId = options.seatId || ''
@@ -193,8 +325,13 @@
 			this.storeName = options.storeName || ''
 			this.roomId = options.roomId || ''
 			this.dateStr = options.date || ''
+			// 从选座页带座位号进来 => 不再显示选座区; 否则在本页选座
+			this.routeSeat = !!options.seatId
 			var d = new Date()
 			this.today = this.dateStr || (d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate())
+			const store = this.currentStore()
+			if (!this.storeName && store.roomName) this.storeName = store.roomName
+			if (!this.roomId && store.roomId) this.roomId = store.roomId
 		}
 	}
 </script>
@@ -207,6 +344,9 @@
 	.section { margin-top: 20rpx; }
 	.card-item { background: #f9f9f9; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; border: 2rpx solid transparent; }
 	.card-item.selected { background: #e8f4ff; border-color: #35a5ed; }
+	.seat-grid { display: flex; flex-wrap: wrap; }
+	.seat-chip { min-width: 104rpx; padding: 14rpx 10rpx; margin: 0 14rpx 14rpx 0; border-radius: 12rpx; background: #f2f4f7; border: 2rpx solid transparent; text-align: center; }
+	.seat-chip-on { background: #35a5ed; border-color: #35a5ed; }
 	.card-item.locked { background: #faf6ef; border-color: #e6a23c; opacity: 0.85; }
 	.empty-state { text-align: center; padding: 40rpx 0; }
 </style>

@@ -339,9 +339,12 @@
 				} catch (e) { console.error(e) }
 			},
 			dailyBook() {
+				// 注意: 这里之前把时间戳直接当 date 传给卡券预约页, 导致后端解析日期失败("预约今天"用不了);
+				// 统一格式化为 yyyy-mm-dd, 并带上门店 roomId(卡券预约页要用它查可选座位)
 				uni.$u.route('/other_pages/daily-checkout/daily-checkout', {
 					storeName: this.store.roomName,
-					date: this.dailyTimestamp
+					roomId: this.store.roomId,
+					date: uni.$u.date(new Date(this.dailyTimestamp), 'yyyy-mm-dd')
 				})
 			}
 		},
