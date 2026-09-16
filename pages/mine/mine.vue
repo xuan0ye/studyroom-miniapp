@@ -390,6 +390,7 @@
 		myPoints
 	} from '@/config/api.js';
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js';
+	import { isCardUsable } from '@/utils/card-usable.js';
 	export default {
 		data() {
 			return {
@@ -413,13 +414,11 @@
 		},
 		computed: {
 			...mapState(['oneToke', 'account']),
-			// 可用卡数量文案: 与「我的会员卡(卡包)」口径一致 —— 未使用且未过期
+			// 可用卡数量文案: 与「我的会员卡(卡包)」口径一致 —— 未激活的卡不过期, 也算可用
 			usableCardText() {
 				var list = (this.account && this.account.card) ? this.account.card : []
-				var now = new Date()
 				var usable = list.filter(function(c) {
-					if (!c || !c.expiryTime || c.consumed) return false
-					return new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+					return isCardUsable(c)
 				})
 				return (usable.length > 0 ? usable.length + '张可用' : '暂无可用卡')
 			}

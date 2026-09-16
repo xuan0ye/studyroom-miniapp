@@ -64,6 +64,7 @@
 		dailyConfig,
 		getMyCard
 	} from '@/config/api.js'
+	import { isCardUsable } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -117,10 +118,10 @@
 					})
 					if (card && card.length > 0) {
 						const now = new Date()
-						// 可用卡(日卡 term=1 / 周卡 term=7, 未过期未使用)
+						// 可用卡(日卡 term=1 / 周卡 term=7): 未激活(买来还没用过)的卡不过期
 						var validCards = card.filter(function(c) {
-							return c.card && (c.card.term === 1 || c.card.term === 7) && !c.consumed && c.expiryTime &&
-								new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+							if (!c.card || (c.card.term !== 1 && c.card.term !== 7)) return false
+							return isCardUsable(c)
 						})
 						this.availableCards = validCards.length
 						// 日卡价格只从日卡(term=1)取, 防止周卡价冒充日卡价展示

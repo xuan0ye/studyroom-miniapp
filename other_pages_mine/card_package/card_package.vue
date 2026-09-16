@@ -33,6 +33,7 @@
 
 <script>
 	import { getMyCard } from '@/config/api.js'
+	import { isCardUsable } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -49,12 +50,10 @@
 			async getCard() {
 				try {
 					const { data: card } = await getMyCard({}, { custom: { auth: true, catch: true } })
-					// 卡包只展示"未使用且未过期"的可用卡; 已使用/已过期的卡不在卡包展示,
-					// 相关使用明细可到「我的 → 学习记录 / 预约记录」查看
-					var now = new Date()
+					// 卡包只展示"可用"的卡: 未激活(买来还没用过)的卡不过期, 首次预约使用后有效期才开始计算;
+					// 已使用/已过期/已用完的卡不在卡包展示, 使用明细可到「我的 → 学习记录 / 预约记录」查看
 					var usable = (card || []).filter(function(c) {
-						if (!c || !c.expiryTime || c.consumed) return false
-						return new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+						return isCardUsable(c)
 					})
 					this.list = usable
 					this.total = this.list.length

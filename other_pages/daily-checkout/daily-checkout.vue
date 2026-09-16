@@ -33,7 +33,7 @@
 							</u-col>
 							<u-col :span="6">
 								<u-text :bold="true" size="28" :text="card.cardTitle" />
-								<u-text size="24" color="#999" :text="card.term === 7 ? ('7天有效，剩 ' + card.remainDays + ' 天') : (card.remainDays + ' 天剩余')" />
+								<u-text size="24" color="#999" :text="card.unused ? ('未使用 · 首次预约后 ' + card.remainDays + ' 天有效') : (card.term === 7 ? ('7天有效，剩 ' + card.remainDays + ' 天') : (card.remainDays + ' 天剩余'))" />
 								<view v-if="card.locked" style="margin-top: 4rpx;">
 									<u-text size="22" color="#e6a23c" :text="card.lockEndLabel + '，期间无需重复预约'" />
 								</view>
@@ -67,6 +67,7 @@
 
 <script>
 	import { dailyConfig, dailyOrder, getMyCard } from '@/config/api.js'
+	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -98,21 +99,19 @@
 					if (card && card.length > 0) {
 						const now = new Date()
 						this.dayCards = card.filter(function(c) {
-							// 只要是"未使用且未过期"的卡都可以用来预约(日卡/周卡/双周卡/月卡/季卡/长期卡/双人卡);
+							// 可用卡统一口径(与后端一致): 未激活的卡不过期, 已用完/已过期的卡不展示;
 							// 区域限制与时段冲突由后端 bookByDayCard 统一校验, 前端不再按 term 写死卡种
-							if (!c || !c.card) return false
-							if (!c.expiryTime || c.consumed) return false
-							const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
-							return expiry > now
+							return isCardUsable(c)
 						}).map(function(c) {
-							const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
-							const remainDays = Math.max(0, Math.ceil((expiry - now) / 86400000))
+							const now = new Date()
+							const remainDays = cardRemainDays(c)
+							const unused = isCardUnused(c)
 							// 周卡已锁座: lockEndTime 在未来 => 该卡已锁定座位, 期间无需重复预约
 							let locked = false
 							let lockEndLabel = ''
 							if (c.lockSeatId && c.lockEndTime) {
-								const lockEnd = new Date(String(c.lockEndTime).replace(/-/g, '/'))
-								if (lockEnd > now) {
+								const lockEnd = cardDate(c.lockEndTime)
+								if (lockEnd && lockEnd > now) {
 									locked = true
 									lockEndLabel = '已锁座至 ' + (lockEnd.getMonth() + 1) + '月' + lockEnd.getDate() + '日'
 								}
@@ -123,6 +122,7 @@
 								cardTitle: c.card.cardTitle,
 								remainDays: remainDays,
 								term: c.card.term,
+								unused: unused,
 								locked: locked,
 								lockEndLabel: lockEndLabel,
 								lockSeatId: c.lockSeatId

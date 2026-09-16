@@ -172,6 +172,7 @@
 		dailyConfig,
 		getMyCard
 	} from '@/config/api.js'
+	import { isCardUsable } from '@/utils/card-usable.js'
 	export default {
 		props: {
 			orderTimestamp: { type: Number },
@@ -318,11 +319,10 @@
 					const { data: cards } = await getMyCard({}, { custom: { auth: true, catch: true } })
 					if (cards && cards.length > 0) {
 						const now = new Date()
-						// 日卡/周卡(term=1/7)且未过期
+						// 日卡/周卡(term=1/7)且可用: 未激活(买来还没用过)的卡不过期
 						const dayCards = cards.filter(function(c) {
 							if (!c.card || (c.card.term !== 1 && c.card.term !== 7)) return false
-							if (!c.expiryTime) return false
-							return new Date(String(c.expiryTime).replace(/-/g, '/')) > now
+							return isCardUsable(c)
 						})
 						this.availableCards = dayCards.length
 						// 统计已锁座的周卡(lockEndTime 在未来)并记录锁座信息

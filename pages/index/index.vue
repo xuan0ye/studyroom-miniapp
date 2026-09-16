@@ -48,7 +48,7 @@
 					<view class="my-card-status-left">
 						<u-text :bold="true" size="28" color="#35a5ed" :text="mc.cardTitle" />
 						<view style="margin-top: 6rpx;">
-							<u-text size="24" color="#666" :text="'开卡：' + mc.startLabel + '　到期：' + mc.expiryLabel" />
+							<u-text size="24" color="#666" :text="mc.unused ? ('未使用 · 首次预约后 ' + mc.remainDays + ' 天有效') : ('开卡：' + mc.startLabel + '　到期：' + mc.expiryLabel)" />
 						</view>
 						<view style="margin-top: 4rpx;">
 							<u-text size="22" color="#999" :text="'剩余 ' + mc.remainDays + ' 天'" />
@@ -143,6 +143,7 @@
 		seatPowerOff
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
+	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -396,27 +397,29 @@
 					}
 					const now = new Date()
 					this.myCards = list.filter(function(c) {
-						// 周卡(term 7)或月卡/长期卡(term>=30), 未过期
-						if (!c.card || !c.expiryTime) return false
+						// 周卡(term 7)或月卡/长期卡(term>=30)
+						if (!c.card) return false
 						const term = parseInt(c.card.term)
 						if (term !== 7 && term < 30) return false
-						const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
-						return expiry > now && !c.consumed
+						// 可用口径统一: 未激活(买来还没用过)的卡不过期, 已用完/已过期的卡不展示
+						return isCardUsable(c)
 					}).map(function(c) {
-						const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
+						const unused = isCardUnused(c)
+						const remainDays = cardRemainDays(c)
+						const expiry = cardDate(c.expiryTime)
 						const start = c.createTime ? new Date(String(c.createTime).replace(/-/g, '/')) : now
-						const remainDays = Math.max(0, Math.ceil((expiry - now) / 86400000))
 						let locked = false
 						if (c.lockSeatId && c.lockEndTime) {
-							const lockEnd = new Date(String(c.lockEndTime).replace(/-/g, '/'))
-							locked = lockEnd > now
+							const lockEnd = cardDate(c.lockEndTime)
+							locked = !!(lockEnd && lockEnd > new Date())
 						}
 						return {
 							id: c.id,
 							cardTitle: c.card.cardTitle || '周期卡',
 							startLabel: (start.getMonth() + 1) + '月' + start.getDate() + '日',
-							expiryLabel: (expiry.getMonth() + 1) + '月' + expiry.getDate() + '日',
+							expiryLabel: expiry ? ((expiry.getMonth() + 1) + '月' + expiry.getDate() + '日') : '待启用',
 							remainDays: remainDays,
+							unused: unused,
 							locked: locked
 						}
 					})

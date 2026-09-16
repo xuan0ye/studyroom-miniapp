@@ -15,7 +15,7 @@
 						<view :class="'card-tag card-tag-' + statusType">{{ statusLabel }}</view>
 							</view>
 							<view class="card-info-bottom">
-								<u-text size="24" color="#4d4d4d" :text="'有效期至 ' + item.expiryTime" />
+								<u-text size="24" color="#4d4d4d" :text="item.expiryTime ? ('有效期至 ' + item.expiryTime) : ('待使用 · 首次预约后 ' + ((item.card && item.card.term) ? item.card.term : 1) + ' 天有效')" />
 							</view>
 						</view>
 					</swiper-item>
@@ -139,16 +139,18 @@
 				var expiry = new Date(String(cur.expiryTime).replace(/-/g, '/'))
 				return expiry < new Date()
 			},
-			// 卡状态标签: 已使用 > 已过期 > 可用
+			// 卡状态标签: 已使用 > 已过期 > 待使用(买来还没用过) > 可用
 			statusLabel() {
 				var cur = this.list[this.currentIndex] || this.list[0] || {}
 				if (cur.consumed) return '已使用'
+				if (!cur.expiryTime) return '待使用'
 				if (this.expired) return '已过期'
 				return '可用'
 			},
 			statusType() {
 				var cur = this.list[this.currentIndex] || this.list[0] || {}
 				if (cur.consumed) return 'error'
+				if (!cur.expiryTime) return 'success'
 				if (this.expired) return 'info'
 				return 'success'
 			},
