@@ -11,6 +11,7 @@
 	import {
 		getHitokoto
 	} from 'common/request/api/hitokoto.js'
+	import { APP_VERSION } from '@/config/version.js'
 
 	// 本地兜底一言: 外部 hitokoto API 未配置域名白名单或请求失败时使用
 	const FALLBACK_QUOTES = [
@@ -27,10 +28,35 @@
 	export default {
 		onLaunch: function() {
 			const that = this
-			console.log('App Launch')
+			console.log('App Launch, 版本 ' + APP_VERSION)
 			uni.hideTabBar({
 				animation: false
 			})
+			// 新版本发布后主动提示重启: 微信默认要等下次冷启动才会用新版,
+			// 不提示的话用户可能长期停留在旧包(表现为"体验版能用、正式版用不了")
+			try {
+				const um = uni.getUpdateManager && uni.getUpdateManager()
+				if (um) {
+					um.onUpdateReady(function() {
+						uni.showModal({
+							title: '发现新版本',
+							content: '新版本已准备好，重启小程序后生效',
+							showCancel: false,
+							confirmText: '立即重启',
+							success() { um.applyUpdate() }
+						})
+					})
+					um.onUpdateFailed(function() {
+						uni.showModal({
+							title: '新版本下载失败',
+							content: '请删除小程序后重新搜索进入，或稍后再试',
+							showCancel: false
+						})
+					})
+				}
+			} catch (e) {
+				console.warn('检查版本更新失败', e)
+			}
 			getHitokoto("k", "json", 20).then(res => {
 				res.forEach(function(res) {
 					if (res !== null) {

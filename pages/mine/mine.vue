@@ -353,6 +353,10 @@
 		<view class="ont-toke">
 			<u-text :bold="false" size="24" color="#353535" align="center" :text='oneToke' />
 		</view>
+		<!-- 版本号: 便于确认手机运行的版本(排查"体验版能用、正式版是旧包") -->
+		<view style="display: flex; justify-content: center; padding-bottom: 20rpx;">
+			<u-text size="20" color="#c2c2c2" align="center" :text="'版本 ' + appVersion" />
+		</view>
 
 		<my-tabbar></my-tabbar>
 		</view>
@@ -390,10 +394,12 @@
 		myPoints
 	} from '@/config/api.js';
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js';
+	import { APP_VERSION } from '@/config/version.js';
 	import { isCardUsable } from '@/utils/card-usable.js';
 	export default {
 		data() {
 			return {
+				appVersion: APP_VERSION,
 				oneTokeMarginTop: 0,
 				pagePath: [
 					'/other_pages_mine/account/account',
