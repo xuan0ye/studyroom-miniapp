@@ -67,7 +67,8 @@
 					<u-text size="24" color="#999" text="正在查询可用座位..." />
 				</view>
 				<view v-else-if="visibleSeats.length === 0" style="margin-top: 16rpx;">
-					<u-text size="24" color="#999" text="该时段暂无可选座位，请更换日期或联系门店" />
+					<u-text size="24" color="#999"
+						:text="hasRoom ? '该时段暂无可选座位，请更换日期或联系门店' : '未获取到门店信息，请返回首页重新选择门店'" />
 				</view>
 				<view v-else class="seat-grid" style="margin-top: 16rpx;">
 					<view class="seat-chip" :class="{ 'seat-chip-on': seatId === s.seatId }" v-for="s in visibleSeats"
@@ -269,6 +270,15 @@
 				this.seatId = seat.seatId
 				this.seatNum = seat.seatNum
 			},
+			// 提示: 短提示用 toast, 长提示(如"该座位已被占用(占用至12月10日)...")用弹窗, 否则会被截断
+			showErr(msg) {
+				const text = msg || '预约失败，请重试'
+				if (String(text).length > 12) {
+					uni.showModal({ title: '无法预约', content: String(text), showCancel: false, confirmText: '知道了' })
+				} else {
+					uni.showToast({ title: String(text), icon: 'none' })
+				}
+			},
 			async confirmCheckout() {
 				if (!this.selectedCardId) return uni.showToast({ title: '请选择卡券', icon: 'none' })
 				if (!this.seatId) return uni.showToast({ title: '请选择座位', icon: 'none' })
@@ -296,7 +306,7 @@
 						})
 					}, 600)
 				} catch (e) {
-					uni.showToast({ title: (e && e.msg) || '预约失败，请重试', icon: 'none' })
+					this.showErr(e && e.msg)
 				} finally {
 					this.submitting = false
 				}
@@ -309,6 +319,10 @@
 			}
 		},
 		computed: {
+			// 是否拿到了门店(查可选座位必须先有 roomId)
+			hasRoom() {
+				return !!(this.roomId || this.currentStore().roomId)
+			},
 			showPriceFen() {
 				const sel = this.dayCards.find(c => c.id === this.selectedCardId)
 				return sel ? sel.priceFen : this.dailyPrice
