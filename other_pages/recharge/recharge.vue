@@ -267,6 +267,13 @@
 						clearInterval(timer)
 						uni.hideLoading()
 						this.getAccount()
+						// 轮询超时: 明确告知去哪里确认, 不要静默结束
+						uni.showModal({
+							title: '支付结果确认中',
+							content: '如微信已扣款，余额会立即到账。请稍后到「我的」查看余额；若未到账请联系门店。',
+							showCancel: false,
+							confirmText: '知道了'
+						})
 					}
 				}, 1500)
 			},

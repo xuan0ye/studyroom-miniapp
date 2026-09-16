@@ -366,6 +366,12 @@
 								icon: 'success',
 								title: '购买成功'
 							})
+							// 支付成功直接进卡包, 让客户立刻看到新卡(避免"以为没成功"而重复付款)
+							setTimeout(function() {
+								uni.redirectTo({
+									url: '/other_pages_mine/card_package/card_package'
+								})
+							}, 900)
 							return
 						}
 					} catch (e) {
@@ -373,6 +379,13 @@
 					}
 					if (tries >= 8) {
 						clearInterval(timer)
+						// 轮询超时: 明确告知去哪里确认, 不要静默结束让客户以为没买成功
+						uni.showModal({
+							title: '支付结果确认中',
+							content: '如微信已扣款，卡券会立即到账。请到「我的 → 会员卡」查看；若未到账请联系门店。',
+							showCancel: false,
+							confirmText: '知道了'
+						})
 					}
 				}, 1500)
 			},
