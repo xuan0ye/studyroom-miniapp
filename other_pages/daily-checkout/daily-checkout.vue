@@ -98,8 +98,9 @@
 					if (card && card.length > 0) {
 						const now = new Date()
 						this.dayCards = card.filter(function(c) {
-							// 日卡(term=1)或周卡(term=7), 未使用且未过期
-							if (!c.card || (c.card.term !== 1 && c.card.term !== 7)) return false
+							// 只要是"未使用且未过期"的卡都可以用来预约(日卡/周卡/双周卡/月卡/季卡/长期卡/双人卡);
+							// 区域限制与时段冲突由后端 bookByDayCard 统一校验, 前端不再按 term 写死卡种
+							if (!c || !c.card) return false
 							if (!c.expiryTime || c.consumed) return false
 							const expiry = new Date(String(c.expiryTime).replace(/-/g, '/'))
 							return expiry > now
