@@ -1,6 +1,6 @@
 <template>
 	<view>
-		<my-navbar leftText="双人卡兑换" leftIcon="arrow-left" :custom="false" bgColor="#ffffff" :autoBack="true"
+		<my-navbar leftText="兑换码兑换" leftIcon="arrow-left" :custom="false" bgColor="#ffffff" :autoBack="true"
 			leftIconSize="40" />
 		<view class="container">
 			<!-- 兑换区 -->
@@ -8,7 +8,7 @@
 				<u-text :bold="true" size="32" text="输入兑换码领卡" />
 				<view style="height: 10rpx;" />
 				<u-text size="24" color="#999"
-					text="同伴购买「双人同行上岸卡」后会把兑换码发给你；输入兑换码，卡券会直接发到你的卡包" />
+					text="输入门店发给你的兑换码，卡券会直接发到你的卡包（日卡/周卡/月卡等都能兑）；卡券有效期从首次预约使用起算，买来暂时不用不会过期" />
 				<view style="height: 24rpx;" />
 				<u-input v-model="code" placeholder="请输入兑换码（不区分大小写）" border="surround" maxlength="16"
 					:clearable="true" />
@@ -16,11 +16,11 @@
 				<u-button type="primary" color="#fe2c55" :loading="redeeming" text="立即兑换" @click="doRedeem" />
 			</view>
 
-			<!-- 我购买的兑换码 -->
+			<!-- 我名下的兑换码 -->
 			<view class="card" v-if="mine.length > 0">
-				<u-text :bold="true" size="32" text="我购买的兑换码" />
+				<u-text :bold="true" size="32" text="我名下的兑换码" />
 				<view style="height: 8rpx;" />
-				<u-text size="24" color="#999" text="把兑换码发给同行好友，好友用自己的微信号兑换后同样会得到一张卡" />
+				<u-text size="24" color="#999" text="可直接发给好友使用（购买双人套餐自动生成的码也会出现在这里）" />
 				<view v-for="(item, i) in mine" :key="i" class="code-item">
 					<view class="code-head">
 						<u-text :bold="true" size="42" color="#fe2c55" :text="item.code" />
@@ -47,11 +47,11 @@
 			<view class="card tip">
 				<u-text :bold="true" size="28" color="#333" text="使用说明" />
 				<view style="height: 10rpx;" />
-				<u-text size="24" color="#888" text="1. 一人付全款购买双人套餐后，系统立即给购买者发卡，并生成 1 个兑换码；" />
+				<u-text size="24" color="#888" text="1. 门店会把兑换码发给你（购买双人套餐时系统自动生成一个，可发给同行好友）；" />
 				<view style="height: 6rpx;" />
-				<u-text size="24" color="#888" text="2. 把兑换码发给同伴，同伴在「我的 → 双人卡兑换」输入即可领卡；" />
+				<u-text size="24" color="#888" text="2. 在「我的 → 兑换码兑换」输入兑换码，卡券立即发到你的卡包；" />
 				<view style="height: 6rpx;" />
-				<u-text size="24" color="#888" text="3. 兑换码自购买日起 30 天内有效，一人一码，兑换后即失效；" />
+				<u-text size="24" color="#888" text="3. 兑换码有有效期（过期不能兑换），一码只能兑换一次，兑换后即失效；" />
 				<view style="height: 6rpx;" />
 				<u-text size="24" color="#888" text="4. 不能兑换自己购买的码；已持有该卡且未过期的账号不能重复兑换。" />
 			</view>

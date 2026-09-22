@@ -274,46 +274,15 @@ export const subscriptionMine = (params, config = {}) => http.get('/api/wx/subsc
 export const subscriptionRenew = (params, config = {}) => http.post('/api/wx/subscription/renew', params, config)
 
 /**
- * ============ AI 学伴 ============
+ * ============ AI 学伴 (已下线) ============
+ * 小程序端 AI 学伴入口与页面已移除(微信审核需生成式AI服务资质),
+ * 原 aiChat/aiSessions/aiMessages/aiFeedback/aiStats/kbDocuments/kbAdd 接口一并移除,
+ * 避免相关字样出现在小程序代码包内。后端接口保留, 待取得资质后再恢复。
  */
 
 /**
- * 发起一轮 AI 对话
- * @param {*} params { message, sessionId }
+ * ============ 学习排行榜 ============
  */
-export const aiChat = (params, config = {}) => http.post('/api/wx/ai/chat', params, config)
-
-/**
- * AI 会话列表
- */
-export const aiSessions = (params, config = {}) => http.get('/api/wx/ai/sessions', { params, ...config })
-
-/**
- * 会话消息列表
- * @param {*} sessionId
- */
-export const aiMessages = (sessionId, params, config = {}) => http.get('/api/wx/ai/sessions/' + sessionId + '/messages', { params, ...config })
-
-/**
- * 提交 AI 回复反馈（赞/踩）
- * @param {*} params { messageId, rating, comment }
- */
-export const aiFeedback = (params, config = {}) => http.post('/api/wx/ai/feedback', params, config)
-
-/**
- * AI 使用统计
- */
-export const aiStats = (params, config = {}) => http.get('/api/wx/ai/stats', { params, ...config })
-
-/**
- * 知识库文档列表
- */
-export const kbDocuments = (params, config = {}) => http.get('/api/wx/ai/kb/documents', { params, ...config })
-
-/**
- * 知识库新增文档（自动切分+向量化）
- */
-export const kbAdd = (params, config = {}) => http.post('/api/wx/ai/kb/documents', params, config)
 
 /**
  * 知识库删除文档

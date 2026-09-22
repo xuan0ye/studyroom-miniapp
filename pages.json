@@ -73,20 +73,6 @@
 					}
 				},
 				{
-					"path": "ai/ai-chat",
-					"style": {
-						"navigationBarTitleText": "AI 学伴",
-						"enablePullDownRefresh": false
-					}
-				},
-				{
-					"path": "ai/ai-kb",
-					"style": {
-						"navigationBarTitleText": "AI 知识库",
-						"enablePullDownRefresh": false
-					}
-				},
-				{
 				"path": "daily-checkout/daily-checkout",
 					"style": {
 						"navigationBarTitleText": "",
@@ -192,7 +178,7 @@
 				{
 					"path": "card-redeem/card-redeem",
 					"style": {
-						"navigationBarTitleText": "双人卡兑换",
+						"navigationBarTitleText": "兑换码兑换",
 						"enablePullDownRefresh": false
 					}
 				}

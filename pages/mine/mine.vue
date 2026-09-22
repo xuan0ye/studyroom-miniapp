@@ -218,7 +218,7 @@
 						</u-row>
 					</view>
 				</view>
-				<!-- 双人卡兑换 -->
+				<!-- 兑换码兑换 -->
 				<view class="item" @click="toCardRedeem">
 					<view class="rank">
 						<u-row>
@@ -229,7 +229,7 @@
 							</u-col>
 							<u-col span="7">
 								<view style="margin-left: 35rpx;">
-									<u-text :bold="false" size="36" text="双人卡兑换" />
+									<u-text :bold="false" size="36" text="兑换码兑换" />
 								</view>
 							</u-col>
 							<u-col span="4">
@@ -261,7 +261,7 @@
 						</u-row>
 					</view>
 				</view>
-				<!-- 第二组: 排行榜 / AI学伴 -->
+				<!-- 第二组: 排行榜 -->
 				<view class="item" @click="toRank">
 					<view class="rank">
 						<u-row>
@@ -283,27 +283,7 @@
 						</u-row>
 					</view>
 				</view>
-				<view class="item" @click="toAI">
-					<view class="rank">
-						<u-row>
-							<u-col span="1">
-								<view class="ai-badge">
-									<u-text text="AI" size="22" color="#ffffff" bold></u-text>
-								</view>
-							</u-col>
-							<u-col span="7">
-								<view style="margin-left: 35rpx;">
-									<u-text :bold="false" size="36" text="AI 学伴" />
-								</view>
-							</u-col>
-							<u-col span="4">
-								<view style="margin-right: 20rpx;">
-									<u-text :bold="false" size="24" color="#666666" align="right" text="问答 · 查座 · 学情" />
-								</view>
-							</u-col>
-						</u-row>
-					</view>
-				</view>
+				<!-- AI 学伴入口已下线(小程序审核需生成式AI资质), 入口与页面均不再打包 -->
 				<!-- 第三组: 意见反馈 -->
 				<view class="item" @click="toFeedback">
 					<view class="rank">
@@ -627,15 +607,7 @@
 				}
 
 			},
-			toAI() {
-				if (this.isLogin) {
-					uni.navigateTo({
-						url: '/other_pages/ai/ai-chat'
-					})
-				} else {
-					uni.$u.toast("请先登录")
-				}
-			},
+			// AI 学伴入口已下线(审核需生成式AI资质), toAI 方法一并移除
 						toGrid(num) {
 				if (this.isLogin) {
 					uni.navigateTo({
@@ -1023,16 +995,7 @@
 		margin-top: 60rpx;
 
 		// background-color: #4CD964;
-		.ai-badge {
-	margin-left: 20rpx;
-	width: 60rpx;
-	height: 60rpx;
-	border-radius: 14rpx;
-	background: linear-gradient(135deg, #4f7cfe, #7a5cfe);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
+		// AI 学伴图标样式已随入口下线移除(审核需生成式AI资质)
 .grid-item {
 			// padding: 20rpx auto;
 			width: 346rpx;
