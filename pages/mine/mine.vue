@@ -283,7 +283,7 @@
 						</u-row>
 					</view>
 				</view>
-				<!-- AI 学伴入口已下线(小程序审核需生成式AI资质), 入口与页面均不再打包 -->
+				<!-- 该功能已下线, 入口与页面均不再打包 -->
 				<!-- 第三组: 意见反馈 -->
 				<view class="item" @click="toFeedback">
 					<view class="rank">
@@ -607,7 +607,7 @@
 				}
 
 			},
-			// AI 学伴入口已下线(审核需生成式AI资质), toAI 方法一并移除
+			// 该功能入口已下线, 对应方法一并移除
 						toGrid(num) {
 				if (this.isLogin) {
 					uni.navigateTo({
@@ -995,7 +995,7 @@
 		margin-top: 60rpx;
 
 		// background-color: #4CD964;
-		// AI 学伴图标样式已随入口下线移除(审核需生成式AI资质)
+		// 相关图标样式已随入口下线移除
 .grid-item {
 			// padding: 20rpx auto;
 			width: 346rpx;

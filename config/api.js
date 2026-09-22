@@ -274,25 +274,8 @@ export const subscriptionMine = (params, config = {}) => http.get('/api/wx/subsc
 export const subscriptionRenew = (params, config = {}) => http.post('/api/wx/subscription/renew', params, config)
 
 /**
- * ============ AI 学伴 (已下线) ============
- * 小程序端 AI 学伴入口与页面已移除(微信审核需生成式AI服务资质),
- * 原 aiChat/aiSessions/aiMessages/aiFeedback/aiStats/kbDocuments/kbAdd 接口一并移除,
- * 避免相关字样出现在小程序代码包内。后端接口保留, 待取得资质后再恢复。
- */
-
-/**
  * ============ 学习排行榜 ============
  */
-
-/**
- * 知识库删除文档
- */
-export const kbDelete = (id, params, config = {}) => http.delete('/api/wx/ai/kb/documents/' + id, { params, ...config })
-
-/**
- * 知识库检索测试
- */
-export const kbSearch = (params, config = {}) => http.get('/api/wx/ai/kb/search', { params, ...config })
 
 /**
  * 上传门禁人脸照片并同步到门禁设备
