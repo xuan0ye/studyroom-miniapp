@@ -397,10 +397,11 @@
 					}
 					const now = new Date()
 					this.myCards = list.filter(function(c) {
-						// 周卡(term 7)或月卡/长期卡(term>=30)
+						// 周卡(term 7)/月卡长期卡(term>=30)/固定区间卡(如中秋国庆畅享券)
 						if (!c.card) return false
+						const fixed = !!(c.card.validEnd)
 						const term = parseInt(c.card.term)
-						if (term !== 7 && term < 30) return false
+						if (!fixed && term !== 7 && term < 30) return false
 						// 可用口径统一: 未激活(买来还没用过)的卡不过期, 已用完/已过期的卡不展示
 						return isCardUsable(c)
 					}).map(function(c) {

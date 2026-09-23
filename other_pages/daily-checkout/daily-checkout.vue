@@ -33,7 +33,7 @@
 							</u-col>
 							<u-col :span="6">
 								<u-text :bold="true" size="28" :text="card.cardTitle" />
-								<u-text size="24" color="#999" :text="card.unused ? ('未使用 · 首次预约后 ' + card.remainDays + ' 天有效') : (card.term === 7 ? ('7天有效，剩 ' + card.remainDays + ' 天') : (card.remainDays + ' 天剩余'))" />
+								<u-text size="24" color="#999" :text="card.windowText ? (card.windowText + ' 可用 · 每天单独预约') : (card.unused ? ('未使用 · 首次预约后 ' + card.remainDays + ' 天有效') : (card.term === 7 ? ('7天有效，剩 ' + card.remainDays + ' 天') : (card.remainDays + ' 天剩余')))" />
 								<view v-if="card.locked" style="margin-top: 4rpx;">
 									<u-text size="22" color="#e6a23c" :text="card.lockEndLabel + '，期间无需重复预约'" />
 								</view>
@@ -93,7 +93,7 @@
 
 <script>
 	import { dailyConfig, dailyOrder, getMyCard, getSeat } from '@/config/api.js'
-	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
+	import { isCardUsable, isCardUnused, cardRemainDays, cardDate, cardLockDays, cardWindowText } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -150,6 +150,9 @@
 								priceFen: c.card.price ? Math.round(parseFloat(c.card.price) * 100) : 0,
 								cardTitle: c.card.cardTitle,
 								remainDays: remainDays,
+								// 一次预约锁定的天数: 固定区间卡=1天(每天单独预约), 周卡=7天, 月卡=剩余天数
+								lockDays: cardLockDays(c),
+								windowText: cardWindowText(c),
 								term: c.card.term,
 								cardType: c.card.cardType,
 								unused: unused,
@@ -191,12 +194,11 @@
 				d.setHours(0, 0, 0, 0)
 				return d
 			},
-			// 所选卡券占用的天数(日卡1天, 周卡7天, 月卡31天...)
+			// 所选卡券一次预约占用的天数(固定区间卡/日卡=1天, 周卡=7天, 月卡按剩余天数)
 			selectedWindowDays() {
 				const sel = this.dayCards.find(c => c.id === this.selectedCardId)
 				if (!sel) return 1
-				const d = parseInt(sel.remainDays) || 1
-				return d >= 7 ? d : 1
+				return parseInt(sel.lockDays) || 1
 			},
 			// 卡券区域限制: 0=不限 / 1=仅沉浸区(16-19号) / 2=禁止沉浸区
 			selectedAreaLimit() {

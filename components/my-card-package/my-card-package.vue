@@ -15,7 +15,7 @@
 						<view :class="'card-tag card-tag-' + statusType">{{ statusLabel }}</view>
 							</view>
 							<view class="card-info-bottom">
-								<u-text size="24" color="#4d4d4d" :text="item.expiryTime ? ('有效期至 ' + item.expiryTime) : ('待使用 · 首次预约后 ' + ((item.card && item.card.term) ? item.card.term : 1) + ' 天有效')" />
+								<u-text size="24" color="#4d4d4d" :text="windowText(item) || (item.expiryTime ? ('有效期至 ' + item.expiryTime) : ('待使用 · 首次预约后 ' + ((item.card && item.card.term) ? item.card.term : 1) + ' 天有效'))" />
 							</view>
 						</view>
 					</swiper-item>
@@ -76,6 +76,7 @@
 </template>
 
 <script>
+	import { cardWindowText, cardWindow } from '@/utils/card-usable.js'
 	export default {
 		name: "my-card-package",
 		props: {
@@ -170,6 +171,15 @@
 			}
 		},
 		methods: {
+			// 固定区间卡(如中秋国庆畅享券): 显示使用区间, 其它卡返回空(走原有"待使用/有效期至"文案)
+			windowText(item) {
+				if (!item) return ''
+				var w = cardWindow(item)
+				if (!w) return ''
+				var txt = cardWindowText(item)
+				if (w.start && new Date() < w.start) return '使用期 ' + txt + '（即将开始）'
+				return '使用期 ' + txt
+			},
 			change(e) {
 				var current = e.detail.current
 				this.currentIndex = current

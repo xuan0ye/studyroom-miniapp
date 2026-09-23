@@ -33,7 +33,7 @@
 
 <script>
 	import { getMyCard } from '@/config/api.js'
-	import { isCardUsable } from '@/utils/card-usable.js'
+	import { isCardVisible } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
