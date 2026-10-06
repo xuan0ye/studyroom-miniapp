@@ -371,11 +371,13 @@
 		uploadAvatar,
 		updateUser,
 		getUserProfile,
-		myPoints
+		myPoints,
+		getMyCard
 	} from '@/config/api.js';
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js';
 	import { APP_VERSION } from '@/config/version.js';
-	import { isCardUsable } from '@/utils/card-usable.js';
+	import { isCardVisible } from '@/utils/card-usable.js';
+	import { runUserGuide } from '@/utils/user-guide.js';
 	export default {
 		data() {
 			return {
@@ -396,18 +398,22 @@
 				points: 0,
 				showAvatar: true,
 				phoneTipShow: false,
+				// 我持有的卡(用于「卡包 N 张可用」计数)
+				myCardList: []
 			}
 		},
 		computed: {
 			...mapState(['oneToke', 'account']),
-			// 可用卡数量文案: 与「我的会员卡(卡包)」口径一致 —— 未激活的卡不过期, 也算可用
-			usableCardText() {
-				var list = (this.account && this.account.card) ? this.account.card : []
-				var usable = list.filter(function(c) {
-					return isCardUsable(c)
-				})
-				return (usable.length > 0 ? usable.length + '张可用' : '暂无可用卡')
-			}
+				// 可用卡数量文案: 与「我的会员卡(卡包)」口径一致 —— 未激活的卡不过期, 也算可用
+				// 注意: 这里必须用「我的卡」接口(/api/wx/user/card)拿到的用户已持有卡,
+				// 而不是卡种目录(/api/wx/common/card), 否则永远算出 0 张
+				usableCardText() {
+					var list = Array.isArray(this.myCardList) ? this.myCardList : []
+					var usable = list.filter(function(c) {
+						return isCardVisible(c && c.card ? c : Object.assign({}, c, { card: {} }))
+					})
+					return (usable.length > 0 ? usable.length + '张可用' : '暂无可用卡')
+				}
 
 		},
 		methods: {
@@ -745,6 +751,8 @@
 						uni.showToast({
 							icon: 'success'
 						})
+						// 新人引导 / 未录人脸提醒(新用户标记在登录时挂起, 这里统一消费)
+						runUserGuide()
 					}).catch((err) => {
 						uni.hideLoading()
 						uni.showToast({
@@ -787,6 +795,15 @@
 					uni.setStorageSync('balance', balance.balance)
 					this.$store.dispatch("getCard", card)
 					uni.setStorageSync('card', JSON.stringify(card))
+					// 我持有的卡(卡包计数用): 单独拉 /api/wx/user/card
+					try {
+						const { data: myCard } = await getMyCard({}, { custom: { auth: true, catch: true } })
+						this.myCardList = (myCard || []).map(function(c) {
+							return Object.assign({}, c || {}, { card: (c && c.card) || {} })
+						})
+					} catch (e) {
+						this.myCardList = []
+					}
 					// 加载积分
 					try {
 						const { data: p } = await myPoints({}, { custom: { auth: true, catch: true } })

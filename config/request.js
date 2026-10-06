@@ -33,6 +33,11 @@ function relogin() {
 						if (token) {
 							uni.setStorageSync('token', token)
 							uni.setStorageSync('isLogin', true)
+							// 静默登录也可能第一次建号: 挂标记, 由 utils/user-guide.js 的 runUserGuide() 消费
+							// (key 字面量与 user-guide.js 保持一致, 那边不反向 import 本文件以免循环依赖)
+							if (data && data.data && data.data.newUser) {
+								uni.setStorageSync('pendingNewUserGuide', 1)
+							}
 							resolve(token)
 						} else {
 							reject(new Error('登录响应缺少 token'))

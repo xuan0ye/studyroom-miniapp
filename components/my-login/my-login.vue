@@ -61,6 +61,7 @@
 
 <script>
 	import { login, phone } from '@/config/api.js'
+	import { markNewUserFromLogin, runUserGuide } from '@/utils/user-guide.js'
 	export default {
 		name: 'my-login',
 		data() {
@@ -103,6 +104,8 @@
 						}).then((data) => {
 							uni.setStorageSync('token', data.data.token)
 							uni.setStorageSync('isLogin', true)
+							// 记录"本次是否新注册": 新人引导延后到整个登录流程结束再弹(先不打断授权手机号)
+							markNewUserFromLogin(data.data)
 
 							// 步骤3: 发送 phone code 到后端绑定手机号
 							return phone({ code: phoneCode }, {
@@ -114,6 +117,8 @@
 							uni.setStorageSync('phone', phoneData.data.phoneNumber)
 							that.loading = false
 							uni.$u.toast('登录成功')
+							// 新人引导: 新用户弹「联系客服领体验卡 + 先录人脸再到店」, 老用户检查人脸提醒
+							runUserGuide()
 
 							// 回到上一页或首页
 							setTimeout(() => {

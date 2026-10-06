@@ -144,6 +144,7 @@
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
+import { runUserGuide } from '@/utils/user-guide.js'
 	export default {
 		data() {
 			return {
@@ -447,6 +448,8 @@
 			if (isLogin == true) {
 				this.getAccount()
 				this.loadMyCards()
+				// 新人引导(还没弹过的) / 未录人脸提醒: 每次进首页检查, 同一天最多提醒一次
+				runUserGuide()
 			}
 			this.loadTodayBooking()
 			const store = uni.getStorageSync('store')
