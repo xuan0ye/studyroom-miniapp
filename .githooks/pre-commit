@@ -1,0 +1,32 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# 每次提交自动更新小程序版本号 —— 保证「我的」页面底部的版本号每次推送都变。
+#
+#   版本格式: YYYY-MM-DD.N   (N = 当天第几次提交, 跨天自动从 1 开始)
+#   显示位置: pages/mine/mine.vue 底部 "版本 xxx"(读 config/version.js 的 APP_VERSION)
+#   临时跳过: git commit --no-verify
+#
+# 为什么要自动: 手工改必然忘记, 而"哪台手机跑的是哪一版"直接决定售后排查效率。
+# ---------------------------------------------------------------------------
+FILE="config/version.js"
+[ -f "$FILE" ] || exit 0
+
+TODAY=$(date +%Y-%m-%d)
+CUR=$(sed -n "s/.*APP_VERSION *= *'\([^']*\)'.*/\1/p" "$FILE" | head -1)
+CUR_DATE=${CUR%%.*}
+CUR_N=${CUR##*.}
+case "$CUR_N" in ''|*[!0-9]*) CUR_N=0 ;; esac
+
+if [ "$CUR_DATE" = "$TODAY" ]; then
+  NEW_N=$((CUR_N + 1))
+else
+  NEW_N=1
+fi
+NEW="$TODAY.$NEW_N"
+
+if [ "$CUR" != "$NEW" ]; then
+  sed -i "s/\(export const APP_VERSION = '\)[^']*\('\)/\1$NEW\2/" "$FILE"
+  git add "$FILE"
+  echo "[version] $CUR -> $NEW  (已写入 config/version.js 并加入本次提交)"
+fi
+exit 0

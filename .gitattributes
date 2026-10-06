@@ -1,0 +1,3 @@
+# 钩子脚本必须保持 LF 行尾, 否则 Git Bash 无法执行
+.githooks/* text eol=lf
+*.sh text eol=lf
