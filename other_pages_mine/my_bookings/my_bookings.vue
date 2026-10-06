@@ -33,13 +33,13 @@
 								text="关灯" style="margin-left: 16rpx;" />
 						</view>
 					</view>
-					<!-- 待使用预约: 提供取消按钮（预约后3小时内可取消） -->
+					<!-- 待使用预约: 提供取消按钮（未签到且在预约当日 24:00 前可取消） -->
 					<view class="cancel-row" v-if="item.status === 0">
 						<u-button v-if="canCancel(item)" size="small" type="warning" plain shape="circle"
 							:loading="cancelLoading === item.id" @click="cancelBooking(item)"
 							text="取消预约" />
 						<view v-else class="cancel-disabled">
-							<u-text size="22" color="#999" text="预约超过3小时不可取消，如需帮助请联系客服" />
+							<u-text size="22" color="#999" :text="cancelDisabledText(item)" />
 						</view>
 					</view>
 				</view>
@@ -58,6 +58,7 @@
 <script>
 	import { myBookings, seatPowerOn, seatPowerOff, cancelBooking } from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
+	import { cardDate } from '@/utils/card-usable.js'
 	export default {
 		data() {
 			return {
@@ -88,18 +89,29 @@
 					var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
 					return String(item.consumptionDate).indexOf(today) === 0
 				},
+				// 未签到(状态0)且在预约当日 24:00 前均可取消
+				// 注意: iOS 不支持 new Date('2026-10-03 20:57:47'), 必须统一走 cardDate 解析
 				canCancel(item) {
-					// 预约提交后3小时内可取消
-					if (!item.createTime) return true
-					var created = new Date(item.createTime)
-					var elapsed = Date.now() - created.getTime()
-					return elapsed < 3 * 60 * 60 * 1000
+					if (!item || item.status !== 0) return false
+					if (!item.consumptionDate) return true
+					var d = cardDate(item.consumptionDate)
+					if (!d) return true
+					var dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+					return new Date() < dayEnd
+				},
+				cancelDisabledText(item) {
+					if (!item || !item.consumptionDate) return '该预约已不可取消'
+					var d = cardDate(item.consumptionDate)
+					if (d && new Date() >= new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+						return '预约日期已过，月卡/季卡请到「我的 → 卡包」请假停卡或取消锁座'
+					}
+					return '该预约已不可取消，如需帮助请联系客服'
 				},
 			cancelBooking(item) {
 				// 取消仅作废当日预约; 平台不做在线退款, 需要退款请联系客服办理
 				uni.showModal({
 					title: '取消预约',
-					content: '取消后该天预约作废。卡费如需退还，请联系门店客服办理。确定取消？',
+					content: '取消后该天预约作废、座位释放。月卡/季卡等长期卡会同时停卡并冻结剩余天数（可在「我的 → 卡包」里再选日期续用）。卡费如需退还，请联系门店客服办理。确定取消？',
 					confirmText: '确定取消',
 					confirmColor: '#e64340',
 					success: async (res) => {

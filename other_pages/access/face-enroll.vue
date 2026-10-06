@@ -8,20 +8,13 @@
 				<u-text size="26" color="#666" text="录入人脸后，到店可刷脸进入自习室。人脸照片服务器不存储、仅门禁设备本地用于比对；门禁权限随预约结束自动失效。" />
 			</view>
 
-			<!-- 官方扫码录入(叶飞云门禁) -->
-			<view class="qr-card">
-				<view class="qr-title-row">
-					<u-text :bold="true" size="30" color="#333" text="扫码录入人脸（官方通道）" />
-					<u-tag text="推荐" type="success" size="mini" />
-				</view>
-				<u-text size="24" color="#888" text="长按下方二维码识别，或保存图片后用微信扫一扫，在官方页面录入人脸后即可刷脸进门" />
-				<view class="qr-box">
-					<image src="https://api.dayousuoan.top/upload/appstatic/other_pages/static/access/face-enroll-qr.png" mode="aspectFit" class="qr-img" show-menu-by-longpress="true" />
-				</view>
-				<view style="margin-top: 20rpx;">
-					<u-button color="#35a5ed" plain size="small" shape="circle" @click="saveQr" text="保存二维码到相册" />
-				</view>
-			</view>
+			<!--
+				已移除「扫码录入人脸（官方通道）」二维码块。
+				原因是它会把用户引到厂商页面(access.yefiot.com)录脸: 那样人脸只进设备、不进我们的数据库,
+				于是门店门禁上会积累一批"系统不知道是谁、也无法撤销"的权限
+				(实测设备上 127 人里, 120 人属于这类)。
+				现在只保留本页的"拍照上传"一条路径 —— 录过的人我们才有记录, 预约结束才能自动撤销。
+			-->
 
 			<!-- 人脸照片 -->
 			<view class="face-card" @click="chooseImage">
@@ -34,9 +27,9 @@
 			</view>
 
 			<!-- 当前档案状态 -->
-			<view v-if="profile" class="status-card">
+			<view v-if="profile && profile.jobnumber" class="status-card">
 				<view class="status-row">
-					<u-text size="28" color="#333" text="门禁状态：" />
+					<u-text size="28" color="#333" text="人脸下发状态：" />
 					<u-tag :text="syncLabel(profile.syncStatus)" :type="syncType(profile.syncStatus)" size="mini" />
 				</view>
 				<view class="status-row" v-if="profile.syncErrmsg">
@@ -45,15 +38,36 @@
 				<view class="status-row" v-if="profile.jobnumber">
 					<u-text size="26" color="#999" :text="'门禁工号：' + profile.jobnumber" />
 				</view>
+				<!-- 门禁设备真实在线情况: 人脸"已下发"不等于设备在线 -->
+				<view class="status-row">
+					<u-text size="26" :color="deviceOnline ? '#67c23a' : '#e64340'"
+						:text="deviceOnline ? '门禁设备在线' : ('门禁设备不在线' + (profile.deviceLastOnline ? '（最后在线 ' + profile.deviceLastOnline + '）' : '（从未接入）'))" />
+				</view>
 			</view>
 
 			<view style="margin-top: 30rpx;">
 				<u-button color="#35a5ed" size="large" shape="circle" :loading="uploading" @click="upload"
 					text="提交人脸，开通门禁" />
 			</view>
-			<view style="margin-top: 20rpx;" v-if="profile && profile.syncStatus === 1">
-				<u-button type="warning" plain size="large" shape="circle" :loading="opening" @click="openDoor"
-					text="远程开门" />
+
+			<!--
+				离屏 canvas: 只用于把照片缩到门禁设备能吃的大小(宽高 < 1024 的 JPEG)。
+				放在屏幕外即可, 不需要用户看见。
+			-->
+			<canvas canvas-id="faceCanvas" id="faceCanvas"
+				style="position: fixed; left: -9999px; top: -9999px; width: 800px; height: 800px;"></canvas>
+			<!--
+				不再提供「一键开门」按钮 —— 已撤掉, 改为引导到店刷脸。
+				实测原因: 这台门禁机的远程开门授权由厂商云端签发不透明签名串(每条都不同, 密钥在厂商手里),
+				服务器发不出; 设备只把 open_door 当作"门已开"的上报事件, 服务器发同名指令会被拒(code:"1")。
+				原来的按钮在设备拒绝时仍提示"指令已下发", 属于假成功, 会让用户站在门口以为门要开了。
+			-->
+			<view v-if="canOpenDoor" style="margin-top: 20rpx; padding: 24rpx; background: #f0f7ff; border-radius: 16rpx;">
+				<u-text size="26" color="#35a5ed" align="center" text="到店后直接在门禁机上刷脸即可开门" />
+				<view style="margin-top: 10rpx;">
+					<u-text size="22" color="#999" align="center"
+						text="手机上无需操作；若刷脸不成功，请找工作人员，或改用门禁机上的刷卡/密码" />
+				</view>
 			</view>
 		</view>
 		<!-- 人脸隐私告知弹窗(进入页面即弹出; 不同意无法使用拍照录入) -->
@@ -62,7 +76,7 @@
 				<view class="facepriv-title">人脸隐私告知</view>
 				<view class="facepriv-body">
 					<view class="facepriv-item">· 用途：你的人脸照片仅用于「到店刷脸开门」1:1 比对；</view>
-					<view class="facepriv-item">· 服务器不存储：照片不会上传、不会保存到自习室服务器；</view>
+					<view class="facepriv-item">· 服务器不存储：照片会经本系统接口转发到门店门禁设备，服务器不留存、不落库；</view>
 					<view class="facepriv-item">· 仅门禁本地保存：照片只写入门店门禁设备本地，用于开门时比对；</view>
 					<view class="facepriv-item">· 有效期：门禁权限随本次预约结束自动失效，设备端人脸将被清除，也可随时联系门店删除。</view>
 				</view>
@@ -76,7 +90,7 @@
 </template>
 
 <script>
-	import { accessFaceUpload, accessProfile, accessOpenDoor } from '@/config/api.js'
+	import { accessFaceUpload, accessProfile } from '@/config/api.js'
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js'
 	export default {
 		data() {
@@ -85,11 +99,24 @@
 				faceBase64: '',
 				profile: null,
 				uploading: false,
-				opening: false,
 				// 人脸隐私同意(独立key v2: 老版本同意过也要重新确认新隐私条款)
 				faceConsented: uni.getStorageSync('face_enroll_consent_v2') === '1',
 				privacyShow: false,
 				privacyResolve: null
+			}
+		},
+		computed: {
+			// 是否显示「一键开门」: 后端按"当天有有效预约"判定, 与人脸下发状态无关
+			canOpenDoor() {
+				return !!(this.profile && this.profile.canOpenDoor)
+			},
+			// 门禁设备是否在线: 超过 1 天未上线即视为离线(与后端 buildPublishFailReason 口径一致)
+			deviceOnline() {
+				var t = this.profile && this.profile.deviceLastOnline
+				if (!t) return false
+				var d = new Date(String(t).replace(/-/g, '/'))
+				if (isNaN(d.getTime())) return false
+				return (Date.now() - d.getTime()) < 86400000
 			}
 		},
 		methods: {
@@ -150,49 +177,60 @@
 			},
 			compressToBase64(path) {
 				var that = this
-				uni.getFileSystemManager().readFile({
-					filePath: path,
-					encoding: 'base64',
-					success: (res) => {
-						that.faceBase64 = res.data
-					},
-					fail: () => {
-						uni.$u.toast('读取照片失败')
-					}
-				})
-			},
-			saveQr() {
-				var that = this
-				// 包内静态图片需先解析出本地可写路径再保存相册
+				// 原实现只是把原图 readFile 成 base64 —— 名为压缩、实为不压缩,
+				// 所以手机原图(3~5MB)转 base64 必然超过 30 万字符的门槛, 用户怎么压都没用。
+				// 现在真的用 canvas 缩放 + 转 JPEG:
+				//   ① 门禁设备要求宽高 < 1024, 原图分辨率本来就不合规;
+				//   ② 设备只吃 JPEG;
+				//   ③ 缩到 800px/质量 0.7 后 base64 通常 10~25 万字符, 稳稳在门槛内。
+				var MAX = 800
+				var QUALITY = 0.7
+				var fallback = function() {
+					uni.getFileSystemManager().readFile({
+						filePath: path,
+						encoding: 'base64',
+						success: (r) => { that.faceBase64 = r.data },
+						fail: () => { that.faceBase64 = ''; uni.$u.toast('读取照片失败') }
+					})
+				}
 				uni.getImageInfo({
-					src: 'https://api.dayousuoan.top/upload/appstatic/other_pages/static/access/face-enroll-qr.png',
+					src: path,
 					success: (info) => {
-						uni.saveImageToPhotosAlbum({
-							filePath: info.path,
-							success: () => {
-								uni.$u.toast('已保存，打开微信扫一扫即可录入')
-							},
-							fail: (e) => {
-								if (e && e.errMsg && e.errMsg.indexOf('auth') > -1) {
-									uni.showModal({
-										title: '提示',
-										content: '需要相册权限，请在设置中开启',
-										confirmText: '去设置',
-										success: (r) => {
-											if (r.confirm) uni.openSetting()
-										}
+						var w = info.width || 0
+						var h = info.height || 0
+						if (!w || !h) return fallback()
+						if (w > MAX || h > MAX) {
+							var ratio = Math.min(MAX / w, MAX / h)
+							w = Math.round(w * ratio)
+							h = Math.round(h * ratio)
+						}
+						var ctx = uni.createCanvasContext('faceCanvas', that)
+						ctx.drawImage(info.path, 0, 0, w, h)
+						ctx.draw(false, function() {
+							uni.canvasToTempFilePath({
+								canvasId: 'faceCanvas',
+								width: w,
+								height: h,
+								destWidth: w,
+								destHeight: h,
+								fileType: 'jpg',
+								quality: QUALITY,
+								success: (out) => {
+									uni.getFileSystemManager().readFile({
+										filePath: out.tempFilePath,
+										encoding: 'base64',
+										success: (r) => { that.faceBase64 = r.data },
+										fail: fallback
 									})
-								} else {
-									uni.$u.toast('保存失败，可长按二维码识别')
-								}
-							}
+								},
+								fail: fallback
+							}, that)
 						})
 					},
-					fail: () => {
-						uni.$u.toast('二维码加载失败，可长按识别')
-					}
+					fail: fallback
 				})
 			},
+			// 原 saveQr()「保存二维码到相册」已随官方扫码通道一起移除(见模板注释)
 			async upload() {
 				if (!this.faceBase64) return uni.$u.toast('请先选择人脸照片')
 				// 提交前再次确认同意状态（防止本地缓存被清除）
@@ -200,7 +238,10 @@
 					var agreed = await this.ensureFaceConsent()
 					if (!agreed) return
 				}
-				if (this.faceBase64.length > 300000) return uni.$u.toast('照片过大，请更换或压缩后再试')
+				if (this.faceBase64.length > 300000) {
+					// 正常路径下 canvas 已缩到 800px/质量 0.7, 不该再到这; 到这说明压缩那步失败了
+					return uni.$u.toast('照片处理失败（' + Math.round(this.faceBase64.length / 1000) + 'K），请重选一张或改用拍照')
+				}
 				this.uploading = true
 				try {
 					const { data: profile } = await accessFaceUpload({ facePhotoBase64: this.faceBase64 }, { custom: { auth: true, catch: true } })
@@ -218,17 +259,9 @@
 					this.uploading = false
 				}
 			},
-			async openDoor() {
-				this.opening = true
-				try {
-					await accessOpenDoor({}, { custom: { auth: true, catch: true } })
-					uni.$u.toast('开门指令已下发')
-				} catch (e) {
-					uni.$u.toast((e && e.msg) || '开门失败，请稍后再试')
-				} finally {
-					this.opening = false
-				}
-			},
+			// 说明: 原 openDoor()「一键开门」已移除 —— 该型号门禁机的远程开门授权由厂商云端签发,
+			// 服务器发不出指令; 原先的实现会在设备拒绝(code:"1")时仍提示"指令已下发"(假成功)。
+			// 现改为在模板里引导用户到店刷脸(见 .open-tip 区块)。
 			async loadProfile() {
 				try {
 					const { data: profile } = await accessProfile({}, { custom: { auth: true, catch: true } })
@@ -265,39 +298,7 @@
 		margin-bottom: 30rpx;
 	}
 
-	.qr-card {
-		background: #ffffff;
-		border-radius: 20rpx;
-		padding: 24rpx;
-		margin-bottom: 30rpx;
-		border: 2rpx solid #e5e5e5;
-	}
-
-	.qr-title-row {
-		display: flex;
-		align-items: center;
-		margin-bottom: 12rpx;
-	}
-
-	.qr-title-row .u-tag {
-		margin-left: 12rpx;
-	}
-
-	.qr-box {
-		margin-top: 20rpx;
-		background: #ffffff;
-		border-radius: 16rpx;
-		padding: 20rpx;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		border: 2rpx dashed #d5d5d5;
-	}
-
-	.qr-img {
-		width: 420rpx;
-		height: 420rpx;
-	}
+	/* 原 .qr-card / .qr-title-row / .qr-box / .qr-img 已随官方扫码通道移除 */
 
 	.face-card {
 		height: 420rpx;

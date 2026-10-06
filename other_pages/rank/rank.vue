@@ -11,7 +11,7 @@
 					</view>
 					<view style="margin-top: 20rpx;">
 						<u-text :bold="false" size="24" color="#ffffff" align="center"
-							:text="current == 0 ? '每天开灯签到，连续天数越多排名越靠前' : '今日 6 点后，谁先到谁先开灯'" />
+							:text="current == 0 ? '累计到店学习天数越多排名越靠前（一天只计一次）' : (current == 1 ? '每天开灯签到，连续天数越多排名越靠前' : '今日 6 点后，谁先到谁先开灯')" />
 					</view>
 				</view>
 			</view>
@@ -73,19 +73,32 @@
 						:key="index">
 						<view>
 							<u-row>
+								<!--
+									注意: u-row 是 12 栅格, 这里必须是 2+2+4+4=12。
+									原来写的是 2+2+6+4=14, 超了 2 格, 于是最右边的数值列被挤出卡片外
+									—— 就是"第四名的连续几天飞出图外"的原因。
+								-->
 								<u-col span="2">
 									<u-text :bold="true" size="32" align="center" color="#000000" :text="index+4" />
 								</u-col>
 								<u-col span="2">
 									<u-avatar :src="normAvatar(item.avatarUrl)" size="80rpx"></u-avatar>
 								</u-col>
-								<u-col span="6">
-									<u-text :bold="true" size="30" align="left" color="#000000" :text="item.nickname" />
+								<u-col span="4">
+									<view class="ellip">
+										<u-text :bold="true" size="30" align="left" color="#000000" :text="clip(item.nickname, 8)" />
+									</view>
 								</u-col>
 								<u-col span="4">
-									<view style="display: flex; justify-content: flex-end; padding-right: 20rpx;">
-										<u-text :bold="true" size="32" color="#4facfe" align="right"
-											:text="valText(item)" />
+									<view style="display: flex; flex-direction: column; align-items: flex-end; padding-right: 10rpx;">
+										<view class="ellip" style="max-width: 100%;">
+											<u-text :bold="true" size="30" color="#4facfe" align="right"
+												:text="clip(valText(item), 8)" />
+										</view>
+										<view class="ellip" style="max-width: 100%;" v-if="subText(item)">
+											<u-text size="22" color="#999" align="right"
+												:text="clip(subText(item), 8)" />
+										</view>
 									</view>
 								</u-col>
 							</u-row>
@@ -116,14 +129,14 @@
 
 <script>
 	import {
+		getDaysRank,
 		getStreakRank,
-		getEarlyRank,
-		getRecordHousrs
+		getEarlyRank
 	} from '@/config/api.js'
 	export default {
 		data() {
 			return {
-				list: ['连续签到', '今日早到'],
+				list: ['学习天数', '连续签到', '今日早到'],
 				current: 0,
 				rankList: [],
 				viewHeight: 1200,
@@ -150,9 +163,26 @@
 				}
 				return s
 			},
+			// 超长文本截断: 多余部分用 … 收尾。
+			// 阈值取 8 而非 5 —— 正常值最长也就"累计 128 天"(7 字符), 卡在 5 会把"连续 12 天"这种
+			// 正常结果也截掉, 反而更难读。真正的防溢出靠 12 栅格 + CSS ellipsis, 这里只是兜底。
+			clip(val, max) {
+				if (val == null) return ''
+				const s = String(val)
+				const n = max || 8
+				return s.length > n ? s.slice(0, n) + '…' : s
+			},
+			// 主数值: 领奖台和列表都用它, 所以保持简短
 			valText(item) {
-				if (this.current == 0) return (item.streak != null ? item.streak : 0) + ' 天'
-				// 早到榜: 显示签到时间
+				// 0 = 学习天数榜(主榜): 累计到店学习天数
+				if (this.current == 0) {
+					return '累计 ' + (item.totalDays != null ? item.totalDays : 0) + ' 天'
+				}
+				// 1 = 自律榜(连续签到)
+				if (this.current == 1) {
+					return '连续 ' + (item.streak != null ? item.streak : 0) + ' 天'
+				}
+				// 2 = 今日早到榜: 显示开灯时间
 				if (item.checkInTime) {
 					const t = new Date(String(item.checkInTime).replace(/-/g, '/'))
 					const pad = function(n) { return n < 10 ? '0' + n : '' + n }
@@ -160,14 +190,29 @@
 				}
 				return '-'
 			},
+			// 次要信息: 天数榜和自律榜各把另一个数字补在后面(说明书要求两个数都要能看到),
+			// 但都塞进主数值会挤坏领奖台布局, 所以单独一行、只在列表里显示
+			subText(item) {
+				if (this.current == 0 && item.streak != null) {
+					return '连续 ' + item.streak + ' 天'
+				}
+				if (this.current == 1 && item.totalDays != null) {
+					return '累计 ' + item.totalDays + ' 天'
+				}
+				return ''
+			},
 			sectionChange(e) {
 				this.current = e
+				this.myRank = -1
+				this.rankList = []
 				this.loadRank()
 			},
 			async loadRank() {
 				try {
 					let res
 					if (this.current == 0) {
+						res = await getDaysRank({}, { custom: { auth: true, catch: true } })
+					} else if (this.current == 1) {
 						res = await getStreakRank({}, { custom: { auth: true, catch: true } })
 					} else {
 						res = await getEarlyRank({}, { custom: { auth: true, catch: true } })
@@ -176,7 +221,6 @@
 					this.rankList = list
 					// 找我的排名
 					this.myRank = -1
-					const myOpenid = uni.getStorageSync('openid')
 					const myUid = uni.getStorageSync('userId')
 					for (let i = 0; i < list.length; i++) {
 						const u = list[i]
@@ -188,13 +232,9 @@
 				} catch (e) {
 					console.error('加载排行榜失败', e)
 				}
-			},
-			async getHours() {
-				try {
-					const { data: res } = await getRecordHousrs({}, { custom: { auth: true, catch: true } })
-					console.log('hours', res)
-				} catch (e) {}
 			}
+			// 原 getHours() 每次进页面都调一次 /record/mine, 但结果只 console.log, 不渲染任何东西
+			// —— 纯白调接口, 已删除。要看"我的学习时长"请走「我的—学习记录」页。
 		},
 		onReady() {
 			const that = this
@@ -211,7 +251,6 @@
 			} catch (e) {
 				this.myInfo = {}
 			}
-			this.getHours()
 			this.loadRank()
 		}
 	}
@@ -293,6 +332,14 @@
 
 	.activeItem {
 		background-color: #f1f1f1;
+	}
+
+	/* 超长昵称/数值一律省略号收尾, 不让它把列表行撑破 */
+	.ellip {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		max-width: 100%;
 	}
 
 	.empty {

@@ -89,6 +89,13 @@ export const getRecordRank = (params, config = {}) => http.get('/api/wx/user/rec
 export const getStreakRank = (params, config = {}) => http.get('/api/wx/user/record/streak', { params, ...config })
 
 /**
+ * 累计学习天数排行榜(主榜, 按累计签到天数降序)
+ * 取代原"学习时长榜": 天数一天只可能 +1, 耗时间/开着灯不关都刷不出来
+ * @param {*} params
+ */
+export const getDaysRank = (params, config = {}) => http.get('/api/wx/user/record/days', { params, ...config })
+
+/**
  * 今日早到排行榜(按当天首次开灯时间)
  * @param {*} params 
  */
@@ -239,6 +246,20 @@ export const myTodaySeat = (config = {}) => http.get('/api/wx/daily/today', conf
  * @param {*} config
  */
 export const cancelBooking = (params, config = {}) => http.post('/api/wx/daily/cancel', params, config)
+
+/**
+ * 长期卡(月卡/季卡)请假停卡: 释放当前锁定座位 + 冻结剩余天数, 每张卡默认3次(后台可追加)
+ * @param {*} params { cardUserId }
+ * @param {*} config
+ */
+export const cardLeave = (params, config = {}) => http.post('/api/wx/daily/leave', params, config)
+
+/**
+ * 周卡/长期卡取消锁座: 释放座位后可重新预约(不消耗请假次数)
+ * @param {*} params { cardUserId }
+ * @param {*} config
+ */
+export const cardUnlock = (params, config = {}) => http.post('/api/wx/daily/unlock', params, config)
 
 /**
  * 获取日卡配置(价格等)

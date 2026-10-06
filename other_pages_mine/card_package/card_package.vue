@@ -52,8 +52,12 @@
 					const { data: card } = await getMyCard({}, { custom: { auth: true, catch: true } })
 					// 卡包只展示"可用"的卡: 未激活(买来还没用过)的卡不过期, 首次预约使用后有效期才开始计算;
 					// 已使用/已过期/已用完的卡不在卡包展示, 使用明细可到「我的 → 学习记录 / 预约记录」查看
-					var usable = (card || []).filter(function(c) {
-						return isCardUsable(c)
+					// 注意: 卡定义缺失(卡种被删)时补一个空对象, 避免整张卡被过滤掉/渲染报错
+					var raw = (card || []).map(function(c) {
+						return Object.assign({}, c || {}, { card: (c && c.card) || {} })
+					})
+					var usable = raw.filter(function(c) {
+						return isCardVisible(c)
 					})
 					this.list = usable
 					this.total = this.list.length
