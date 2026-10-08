@@ -22,7 +22,7 @@
 				<view class="today-light-left">
 					<view class="today-light-title">
 						<u-icon name="server-man" color="#35a5ed" size="34"></u-icon>
-						<u-text :bold="true" size="30" color="#333" text="今日预约灯光" style="margin-left: 10rpx;" />
+						<u-text :bold="true" size="30" color="#333" text="今日预约" style="margin-left: 10rpx;" />
 					</view>
 					<view style="margin-top: 8rpx;">
 						<u-text size="26" color="#666" :text="'座位：' + (todayBooking.seatNum ? todayBooking.seatNum + ' 号' : '未选座位')" />
@@ -37,6 +37,20 @@
 					<u-button size="small" type="default" shape="circle"
 						:loading="lightLoading === 'off'" @click="lightOff" text="关灯" style="margin-left: 16rpx;" />
 				</view>
+			</view>
+			<!-- 一键开门: 有今日预约才显示(后端也只放行当天有有效预约的人) -->
+			<view v-if="todayBooking" class="door-open-card">
+				<view class="door-open-left">
+					<u-icon name="home" color="#19be6b" size="34"></u-icon>
+					<view style="margin-left: 12rpx;">
+						<u-text :bold="true" size="30" color="#333" text="到店开门" />
+						<view style="margin-top: 4rpx;">
+							<u-text size="22" color="#909399" text="门口点一下即可开门；刷脸也能进" />
+						</view>
+					</view>
+				</view>
+				<u-button size="small" type="success" color="#19be6b" shape="circle"
+					:loading="doorLoading" @click="openDoor" text="一键开门" />
 			</view>
 			<!-- 我的周期卡(周卡/月卡: 开卡日期/到期日期/锁座状态) -->
 			<view v-if="myCards.length > 0" class="my-card-status">
@@ -140,7 +154,8 @@
 		getMyCard,
 		myTodaySeat,
 		seatPowerOn,
-		seatPowerOff
+		seatPowerOff,
+		accessOpenDoor
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
@@ -153,6 +168,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				storeList: [],
 				todayBooking: null,
 				lightLoading: '',
+			// 一键开门(仅当天有有效预约时可点; 后端也会再校验一次)
+			doorLoading: false,
 				myCards: [],
 				promoList: []
 			}
@@ -372,6 +389,26 @@ import { runUserGuide } from '@/utils/user-guide.js'
 					this.lightLoading = ''
 				}
 			},
+			/**
+			 * 一键开门: 有今日有效预约才能开(后端也会再校验"当天有有效预约", 没有会如实报错)。
+			 * 后端是等设备回执 result=0 才算成功的 —— 返回成功就是门真的开了, 不是"指令已下发"。
+			 */
+			async openDoor() {
+				if (this.doorLoading) return
+				this.doorLoading = true
+				try {
+					const res = await accessOpenDoor({}, { custom: { auth: true, catch: true } })
+					if (res && res.code === 200 && res.data === true) {
+						uni.$u.toast('门已打开，请推门进入')
+					} else {
+						uni.$u.toast((res && res.msg) || '开门失败，请到门口刷脸或联系工作人员')
+					}
+				} catch (e) {
+					uni.$u.toast((e && e.msg) || '开门失败，请到门口刷脸或联系工作人员')
+				} finally {
+					this.doorLoading = false
+				}
+			},
 			async lightOff() {
 				if (!this.todayBooking) return
 				this.lightLoading = 'off'
@@ -500,6 +537,24 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		background-color: #ffffff;
 		border-radius: 20rpx;
 		box-shadow: 0 6rpx 20rpx rgba(53, 165, 237, 0.12);
+	}
+
+	// 一键开门(有今日预约才显示)
+	.door-open-card {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 0 40rpx;
+		margin-top: 20rpx;
+		padding: 26rpx 30rpx;
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		box-shadow: 0 6rpx 20rpx rgba(25, 190, 107, 0.12);
+	}
+
+	.door-open-left {
+		display: flex;
+		align-items: center;
 	}
 
 	// 我的周期卡卡片

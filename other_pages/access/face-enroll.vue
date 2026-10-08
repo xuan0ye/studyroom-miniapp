@@ -57,16 +57,21 @@
 			<canvas canvas-id="faceCanvas" id="faceCanvas"
 				style="position: fixed; left: -9999px; top: -9999px; width: 800px; height: 800px;"></canvas>
 			<!--
-				不再提供「一键开门」按钮 —— 已撤掉, 改为引导到店刷脸。
-				实测原因: 这台门禁机的远程开门授权由厂商云端签发不透明签名串(每条都不同, 密钥在厂商手里),
-				服务器发不出; 设备只把 open_door 当作"门已开"的上报事件, 服务器发同名指令会被拒(code:"1")。
-				原来的按钮在设备拒绝时仍提示"指令已下发", 属于假成功, 会让用户站在门口以为门要开了。
+				一键开门(2026-10-08 恢复): 原先撤掉是因为判定"该型号不支持服务器远程开门" ——
+				但那个结论来自用 action 协议 {"action":"open_door"} 的实测, 而厂商两版协议文档里
+				"远程开门"都是走 cs 协议的 cmd 报文(v1.11 (五) cmd=openDoor / v1.12 第11节 cmd=F1openDoor),
+				设备回 {"result":0} 即成功, 并会补一条"开门记录上传"(开门类型 5=远程开门)。
+				后端已改为按文档下发, 并以设备回执 result=0 为准 —— 失败会如实报错, 不会假成功。
 			-->
-			<view v-if="canOpenDoor" style="margin-top: 20rpx; padding: 24rpx; background: #f0f7ff; border-radius: 16rpx;">
-				<u-text size="26" color="#35a5ed" align="center" text="到店后直接在门禁机上刷脸即可开门" />
+			<view v-if="canOpenDoor" style="margin-top: 20rpx; padding: 24rpx; background: #f0fff6; border-radius: 16rpx;">
+				<u-text size="26" color="#19be6b" align="center" text="到店可直接点下面按钮开门, 也可以刷脸进门" />
+				<view style="margin-top: 16rpx; display: flex; justify-content: center;">
+					<u-button type="success" color="#19be6b" shape="circle" size="medium"
+						:loading="doorLoading" @click="openDoor" text="一键开门" />
+				</view>
 				<view style="margin-top: 10rpx;">
 					<u-text size="22" color="#999" align="center"
-						text="手机上无需操作；若刷脸不成功，请找工作人员，或改用门禁机上的刷卡/密码" />
+						text="按钮只在当天有有效预约时可用；刷脸不成功可找工作人员，或改用门禁机上的刷卡/密码" />
 				</view>
 			</view>
 		</view>
@@ -90,7 +95,7 @@
 </template>
 
 <script>
-	import { accessFaceUpload, accessProfile } from '@/config/api.js'
+	import { accessFaceUpload, accessProfile, accessOpenDoor } from '@/config/api.js'
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js'
 	export default {
 		data() {
@@ -99,6 +104,8 @@
 				faceBase64: '',
 				profile: null,
 				uploading: false,
+				// 一键开门(仅当天有有效预约时可点; 后端会再校验)
+				doorLoading: false,
 				// 人脸隐私同意(独立key v2: 老版本同意过也要重新确认新隐私条款)
 				faceConsented: uni.getStorageSync('face_enroll_consent_v2') === '1',
 				privacyShow: false,
@@ -259,9 +266,27 @@
 					this.uploading = false
 				}
 			},
-			// 说明: 原 openDoor()「一键开门」已移除 —— 该型号门禁机的远程开门授权由厂商云端签发,
-			// 服务器发不出指令; 原先的实现会在设备拒绝(code:"1")时仍提示"指令已下发"(假成功)。
-			// 现改为在模板里引导用户到店刷脸(见 .open-tip 区块)。
+			/**
+			 * 一键开门(2026-10-08 恢复)。
+			 * 后端按厂商协议文档下发 cmd=F1openDoor(cs 通道), 并以设备回执 result=0 作为成功判据,
+			 * 所以这里返回成功 = 门真的开了; 无有效预约/设备不在线 都会如实报错。
+			 */
+			async openDoor() {
+				if (this.doorLoading) return
+				this.doorLoading = true
+				try {
+					const res = await accessOpenDoor({}, { custom: { auth: true, catch: true } })
+					if (res && res.code === 200 && res.data === true) {
+						uni.$u.toast('门已打开，请推门进入')
+					} else {
+						uni.$u.toast((res && res.msg) || '开门失败，请到门口刷脸或联系工作人员')
+					}
+				} catch (e) {
+					uni.$u.toast((e && e.msg) || '开门失败，请到门口刷脸或联系工作人员')
+				} finally {
+					this.doorLoading = false
+				}
+			},
 			async loadProfile() {
 				try {
 					const { data: profile } = await accessProfile({}, { custom: { auth: true, catch: true } })
