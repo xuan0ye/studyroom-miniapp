@@ -199,8 +199,22 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				try {
 					const res = await getPromoList({}, { custom: { catch: true, toast: false } })
 					const list = (res && res.data) ? res.data : []
+					// 配图地址有两种形态(与轮播图同一套约定, 见 setSwiper):
+					//   1) /upload/...  —— 后台上传接口返回的本地相对路径 → 拼当前环境域名;
+					//   2) http(s)://... —— 云OSS / 静态资源的绝对地址 → 原样使用。
+					// 少这一步, 后台新上传的配图在小程序里就是灰色破图(小程序不认相对路径, 只有轮播图补了域名)。
 					this.promoList = (list || []).filter(function(p) {
 						return p && p.title
+					}).map(function(p) {
+						var u = p && p.imageUrl
+						if (u && u.indexOf('/upload/') === 0) {
+							var host = 'https://api.dayousuoan.top'
+							try {
+								host = require('@/config/config.js').currentHost()
+							} catch (e) {}
+							p.imageUrl = host + u
+						}
+						return p
 					})
 				} catch (e) {
 					this.promoList = []
@@ -307,6 +321,28 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				}
 				this.$store.commit('setStoreList', res.rows)
 				this.storeList = res.rows
+			},
+			/**
+			 * 清空"只有登录用户才有"的页面数据(退出登录 / 登录态失效时调用)。
+			 *
+			 * 注意这些都是页面 data, 不是缓存 —— 退出登录时 mine.vue 只做了 clearStorageSync(),
+			 * 而首页 onShow 不会重建页面实例, 所以 myCards 会一直是上一个账号的值:
+			 * 表现就是"已经退出登录了, 回到首页还在显示我的周期卡"。
+			 */
+			clearUserState() {
+				this.myCards = []
+				this.todayBooking = null
+				this.doorOpenEnabled = false
+				// 余额/卡券还留在 vuex 与缓存里, 一并复位, 免得其它页面读到上一个账号的数据
+				try {
+					this.$store.commit('logout')
+					this.$store.commit('setBalance', 0)
+					this.$store.commit('setCard', [])
+				} catch (e) {}
+				try {
+					uni.removeStorageSync('balance')
+					uni.removeStorageSync('card')
+				} catch (e) {}
 			},
 			async getAccount() {
 				let account = {
@@ -514,10 +550,15 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			if (isLogin == true) {
 				this.getAccount()
 				this.loadMyCards()
+				this.loadTodayBooking()
 				// 新人引导(还没弹过的) / 未录人脸提醒: 每次进首页检查, 同一天最多提醒一次
 				runUserGuide()
+			} else {
+				// 退出登录(或被踢下线)后回到首页: 必须清掉上一个账号残留的"内存数据"。
+				// 首页走的是 onShow —— 页面实例不会重建, 退出时只 clearStorageSync() 清缓存并不够,
+				// 否则会继续显示"我的周期卡""今日预约"等上一个账号的内容(实测就是这样)。
+				this.clearUserState()
 			}
-			this.loadTodayBooking()
 			const store = uni.getStorageSync('store')
 			if (store != null && store != '') {
 				console.log('onShow store---', store)

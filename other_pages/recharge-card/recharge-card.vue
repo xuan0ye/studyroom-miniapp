@@ -76,6 +76,14 @@
 						<u-text :bold="false" size="30" color="#303133" text="1张" align="left" />
 					</view>
 				</view>
+				<!--
+					卡券说明: 后台「卡券管理」里维护, 选中哪张卡就显示哪张。
+					用 <text> + white-space: pre-wrap, 后台填的换行能原样显示(适合一条条列: 座位范围/可请假次数等)。
+				-->
+				<view v-if="card.cardDesc"
+					style="margin-top: 18rpx; padding-top: 18rpx; border-top: 1rpx solid #f0f0f0;">
+					<text class="card-desc">{{ card.cardDesc }}</text>
+				</view>
 			</view>
 			<view style="height: 20rpx;"></view>
 		</view>
@@ -546,6 +554,16 @@
 		margin: auto 40rpx;
 		padding: 30rpx 30rpx;
 		background-color: $u-bg-color;
+	}
+
+	// 卡券说明: 保留后台填写的换行(一条条列), 例如座位范围 / 可请假次数 / 是否锁座
+	.card-desc {
+		display: block;
+		font-size: 24rpx;
+		color: #606266;
+		line-height: 1.7;
+		white-space: pre-wrap;
+		word-break: break-all;
 	}
 
 	.card-button {
