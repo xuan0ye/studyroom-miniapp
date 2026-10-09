@@ -317,6 +317,15 @@ export const accessProfile = (params, config = {}) => http.get('/api/wx/access/p
 export const accessOpenDoor = (params, config = {}) => http.post('/api/wx/access/door/open', null, { ...config, params })
 
 /**
+ * 「一键开门」当前是否可用(后端开关)
+ *
+ * 本机门禁设备跑的是"时之盾"私有协议(protocolVersion=0), 服务器发不出开门口令,
+ * 厂商文档里的远程开门属于 protocolVersion=1 标准协议 —— 后端返回 false, 前端据此隐藏按钮,
+ * 免得用户点了却开不了门。开关打开后按钮自动出现, 无需重新上传小程序。
+ */
+export const accessDoorAvailable = (params, config = {}) => http.get('/api/wx/access/door/available', { params, ...config })
+
+/**
  * 查询我的积分(含流水)
  */
 export const myPoints = (params, config = {}) => http.get('/api/wx/points/mine', { params, ...config })

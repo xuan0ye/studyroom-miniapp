@@ -57,11 +57,13 @@
 			<canvas canvas-id="faceCanvas" id="faceCanvas"
 				style="position: fixed; left: -9999px; top: -9999px; width: 800px; height: 800px;"></canvas>
 			<!--
-				一键开门(2026-10-08 恢复): 原先撤掉是因为判定"该型号不支持服务器远程开门" ——
-				但那个结论来自用 action 协议 {"action":"open_door"} 的实测, 而厂商两版协议文档里
-				"远程开门"都是走 cs 协议的 cmd 报文(v1.11 (五) cmd=openDoor / v1.12 第11节 cmd=F1openDoor),
-				设备回 {"result":0} 即成功, 并会补一条"开门记录上传"(开门类型 5=远程开门)。
-				后端已改为按文档下发, 并以设备回执 result=0 为准 —— 失败会如实报错, 不会假成功。
+				一键开门: 显不显示由后端 profile.canOpenDoor 决定(= 当天有有效预约 且 本机真的开得了门)。
+				2026-10-09 定论: 本机设备跑的是"时之盾"私有协议(protocolVersion=0), 只订阅
+				iot/cli/<type>/<sn>/eth, 从未订阅厂商文档协议(cs)的主题; 实测把文档里的指令发过去
+				分别被回 code 7(不认该动作)/code 2(报文格式)/code 1(拒绝) —— 服务器发不出开门口令。
+				文档里的远程开门(F1openDoor)属于 protocolVersion=1 标准协议, 对本机不生效。
+				现场把设备协议改成标准协议并重启, 或加装开门继电器并配好 studyroom.door.open-url 后,
+				后端开关打开, 本按钮自动出现 —— 无需重新上传小程序。
 			-->
 			<view v-if="canOpenDoor" style="margin-top: 20rpx; padding: 24rpx; background: #f0fff6; border-radius: 16rpx;">
 				<u-text size="26" color="#19be6b" align="center" text="到店可直接点下面按钮开门, 也可以刷脸进门" />

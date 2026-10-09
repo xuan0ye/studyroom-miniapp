@@ -38,8 +38,14 @@
 						:loading="lightLoading === 'off'" @click="lightOff" text="关灯" style="margin-left: 16rpx;" />
 				</view>
 			</view>
-			<!-- 一键开门: 有今日预约才显示(后端也只放行当天有有效预约的人) -->
-			<view v-if="todayBooking" class="door-open-card">
+			<!--
+				一键开门: 有今日预约 且 后端确认"本机真的开得了门"才显示。
+				本机门禁跑的是时之盾私有协议(protocolVersion=0), 服务器指令开不了门(实测回 code 7/2/1),
+				厂商文档里的远程开门属于 protocolVersion=1 标准协议。所以按钮默认不显示;
+				现场把设备协议改成标准协议并重启, 或加装开门继电器并配好 studyroom.door.open-url 后,
+				后端开关一开, 按钮自动出现 —— 无需重新上传小程序。
+			-->
+			<view v-if="todayBooking && doorOpenEnabled" class="door-open-card">
 				<view class="door-open-left">
 					<u-icon name="home" color="#19be6b" size="34"></u-icon>
 					<view style="margin-left: 12rpx;">
@@ -155,7 +161,8 @@
 		myTodaySeat,
 		seatPowerOn,
 		seatPowerOff,
-		accessOpenDoor
+		accessOpenDoor,
+		accessDoorAvailable
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
@@ -170,6 +177,9 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				lightLoading: '',
 			// 一键开门(仅当天有有效预约时可点; 后端也会再校验一次)
 			doorLoading: false,
+			// 一键开门是否可用(后端开关)。本机设备是"时之盾"私有协议(protocolVersion=0),
+			// 服务器发不出开门口令, 所以默认 false、按钮不显示; 开关打开后自动出现, 无需重新上传小程序
+			doorOpenEnabled: false,
 				myCards: [],
 				promoList: []
 			}
@@ -390,6 +400,24 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				}
 			},
 			/**
+			 * 查询「一键开门」当前是否可用, 决定按钮显不显示。
+			 *
+			 * 为什么要有这道闸门: 本机门禁设备跑的是"时之盾"私有协议(protocolVersion=0),
+			 * 服务器发不出开门口令 —— 实测把厂商文档里的任何指令发过去, 分别被回
+			 * code 7(不认该动作)/code 2(报文格式)/code 1(拒绝); 设备也从未订阅文档协议的 cs 主题。
+			 * 厂商文档里的远程开门属于 protocolVersion=1 标准协议。
+			 * 所以按钮默认不显示, 免得用户点了却开不了门。现场把设备协议改成标准协议并重启、
+			 * 或加装继电器并配好 studyroom.door.open-url 后, 后端开关打开, 按钮自动出现。
+			 */
+			async loadDoorAvailable() {
+				try {
+					const res = await accessDoorAvailable({}, { custom: { catch: true } })
+					this.doorOpenEnabled = !!(res && res.code === 200 && res.data === true)
+				} catch (e) {
+					this.doorOpenEnabled = false
+				}
+			},
+			/**
 			 * 一键开门: 有今日有效预约才能开(后端也会再校验"当天有有效预约", 没有会如实报错)。
 			 * 后端是等设备回执 result=0 才算成功的 —— 返回成功就是门真的开了, 不是"指令已下发"。
 			 */
@@ -481,6 +509,7 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		},
 		onShow() {
 			this.setIndex(0)
+			this.loadDoorAvailable()
 			const isLogin = uni.getStorageSync('isLogin')
 			if (isLogin == true) {
 				this.getAccount()
