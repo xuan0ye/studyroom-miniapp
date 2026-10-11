@@ -114,6 +114,14 @@ export const getSwiper = (params, config = {}) => http.get('/api/wx/common/swipe
 export const getPromoList = (params, config = {}) => http.get('/api/wx/common/promo', { params, ...config })
 
 /**
+ * 首页通知公告(后台「系统管理-通知公告」里维护的)
+ *
+ * 只返回已发布(status=正常)的公告, 最新的在前; 无需登录 —— 首页未登录也要能看到闭店/停业等通知。
+ * 返回字段: noticeId / title / type / content(富文本) / contentText(压成一行的纯文本, 给公告条用) / createTime
+ */
+export const getNoticeList = (params, config = {}) => http.get('/api/wx/common/notice', { params, ...config })
+
+/**
  * 获取轮播图
  * @param {*} params 
  */

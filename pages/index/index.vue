@@ -14,6 +14,15 @@
 					</swiper-item>
 				</swiper>
 			</view>
+			<!--
+				通知公告(后台「系统管理-通知公告」维护):
+				有已发布的公告才显示; 点一下看全文。闭店/临时调整这类通知放这里, 顾客一进首页就能看到。
+			-->
+			<view v-if="noticeList.length > 0" class="notice-bar" @click="noticeShow = true">
+				<u-icon name="bell" color="#ff8215" size="34"></u-icon>
+				<text class="notice-bar-text">{{ noticeList[0].contentText || noticeList[0].title }}</text>
+				<text class="notice-bar-more">{{ noticeList.length > 1 ? ('共' + noticeList.length + '条') : '详情' }} ›</text>
+			</view>
 			<view>
 				<my-index-card></my-index-card>
 			</view>
@@ -134,6 +143,20 @@
 		<view style="margin-top: 20rpx; padding-bottom: 10rpx; display: flex; justify-content: center;">
 			<u-text :bold="false" size="24" color="#353535" align="center" :text="oneToke" />
 		</view>
+		<!-- 公告详情弹层(纯 view 实现, 与项目里其它弹窗一致, 不额外引组件) -->
+		<view v-if="noticeShow" class="notice-mask" @click="noticeShow = false">
+			<view class="notice-card" @click.stop>
+				<view class="notice-card-title">通知公告</view>
+				<scroll-view scroll-y class="notice-card-body">
+					<view v-for="(n, ni) in noticeList" :key="ni" class="notice-item">
+						<view class="notice-item-title">{{ n.title }}</view>
+						<rich-text class="notice-item-content" :nodes="n.content"></rich-text>
+						<view v-if="ni < noticeList.length - 1" class="notice-divider"></view>
+					</view>
+				</scroll-view>
+				<view class="notice-card-close" @click="noticeShow = false">关闭</view>
+			</view>
+		</view>
 		<my-tabbar></my-tabbar>
 			<view style="max-height: 300rpx;">
 				<my-action-sheet :show="show" :list="storeList" @closeShow="closeShow"></my-action-sheet>
@@ -154,6 +177,7 @@
 	import {
 		getSwiper,
 		getPromoList,
+		getNoticeList,
 		getStore,
 		getBalance,
 		getCard,
@@ -182,7 +206,10 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			// 服务器发不出开门口令, 所以默认 false、按钮不显示; 开关打开后自动出现, 无需重新上传小程序
 			doorOpenEnabled: false,
 				myCards: [],
-				promoList: []
+				promoList: [],
+				// 通知公告(后台「系统管理-通知公告」): 最新在前, 首页只显示第一条, 点开看全部
+				noticeList: [],
+				noticeShow: false
 			}
 		},
 		computed: {
@@ -190,6 +217,23 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		},
 		methods: {
 			...mapMutations(['setIndex']),
+			/**
+			 * 首页通知公告(后台「系统管理-通知公告」维护的)。
+			 *
+			 * 无需登录: 首页对未登录的人也要能看到闭店/临时调整这类通知。
+			 * 有已发布公告时首页顶部显示一条公告条(只显示最新一条), 点开看全部全文。
+			 */
+			async loadNotice() {
+				try {
+					const res = await getNoticeList({ limit: 5 }, { custom: { catch: true, toast: false } })
+					const list = (res && res.data) ? res.data : []
+					this.noticeList = (list || []).filter(function(n) {
+						return n && (n.title || n.contentText)
+					})
+				} catch (e) {
+					this.noticeList = []
+				}
+			},
 			toCardPromo() {
 				uni.navigateTo({
 					url: "/other_pages/recharge-card/recharge-card"
@@ -549,6 +593,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		},
 		onShow() {
 			this.setIndex(0)
+			// 公告: 无需登录, 每次进首页都拉一次(闭店/临时调整这类通知要新鲜)
+			this.loadNotice()
 			// 只在已登录时查开门可用性: 未登录时这个接口必然 401, 会白白触发一次静默重登
 			// (而每次静默重登都会把上一个 token 顶下线 —— 别在首页制造这种无意义的 401)
 			if (isLoggedIn()) {
@@ -629,6 +675,95 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		background-color: #ffffff;
 		border-radius: 20rpx;
 		box-shadow: 0 6rpx 20rpx rgba(25, 190, 107, 0.12);
+	}
+
+	// 首页通知公告条(后台通知公告维护; 只有已发布的才显示)
+	.notice-bar {
+		display: flex;
+		align-items: center;
+		margin: 0 40rpx 10rpx 40rpx;
+		padding: 18rpx 24rpx;
+		background-color: #fff8ec;
+		border-radius: 16rpx;
+	}
+
+	.notice-bar-text {
+		flex: 1;
+		margin: 0 12rpx;
+		font-size: 26rpx;
+		color: #8a5a00;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.notice-bar-more {
+		font-size: 24rpx;
+		color: #ff8215;
+	}
+
+	// 公告详情弹层
+	.notice-mask {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.notice-card {
+		width: 620rpx;
+		max-height: 72vh;
+		background: #ffffff;
+		border-radius: 20rpx;
+		padding: 30rpx;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.notice-card-title {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #303133;
+		text-align: center;
+	}
+
+	.notice-card-body {
+		margin-top: 20rpx;
+		max-height: 52vh;
+	}
+
+	.notice-item-title {
+		font-size: 28rpx;
+		font-weight: bold;
+		color: #303133;
+		margin-bottom: 10rpx;
+	}
+
+	.notice-item-content {
+		font-size: 26rpx;
+		color: #606266;
+		line-height: 1.7;
+	}
+
+	.notice-divider {
+		height: 1rpx;
+		background: #eeeeee;
+		margin: 24rpx 0;
+	}
+
+	.notice-card-close {
+		margin-top: 20rpx;
+		padding-top: 16rpx;
+		border-top: 1rpx solid #f0f0f0;
+		text-align: center;
+		color: #35a5ed;
+		font-size: 28rpx;
 	}
 
 	.door-open-left {
