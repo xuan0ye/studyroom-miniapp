@@ -65,6 +65,7 @@
 		getMyCard
 	} from '@/config/api.js'
 	import { isCardUsable } from '@/utils/card-usable.js'
+import { isLoggedIn } from '@/utils/auth.js'
 	export default {
 		data() {
 			return {
@@ -182,8 +183,10 @@
 		},
 		onShow() {
 			this.setIndex(1)
-			const isLogin = uni.getStorageSync('isLogin')
-			if (isLogin !== true && isLogin !== 'true' && isLogin !== 1) {
+			// 登录态只看 token(见 utils/auth.js):
+			// isLogin 这个缓存标记与真实登录态可能不同步(静默重登/401清理路径), 曾导致
+			// "明明已登录, 进预约页仍被拦请先登录, 退掉再登一次才好"。
+			if (!isLoggedIn()) {
 				// 未登录: 引导登录后再预约
 				uni.showModal({
 					title: '请先登录',

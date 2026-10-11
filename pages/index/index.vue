@@ -166,6 +166,7 @@
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
+	import { isLoggedIn } from '@/utils/auth.js'
 import { runUserGuide } from '@/utils/user-guide.js'
 	export default {
 		data() {
@@ -374,7 +375,10 @@ import { runUserGuide } from '@/utils/user-guide.js'
 					uni.setStorageSync('card', JSON.stringify(card))
 				} catch (res) {
 					if (res.code == 401) {
-						uni.clearStorageSync()
+						// 只清"账号数据", 绝不要 uni.clearStorageSync() 一锅端:
+						// request.js 的 401 静默重登可能刚换到新 token, 一锅端会把新 token 一起清掉,
+						// 结果就是"明明已登录, 进预约页却被拦请先登录, 退掉再登才好"(实测踩过)。
+						this.clearUserState()
 					}
 				}
 			},
@@ -546,8 +550,9 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		onShow() {
 			this.setIndex(0)
 			this.loadDoorAvailable()
-			const isLogin = uni.getStorageSync('isLogin')
-			if (isLogin == true) {
+			// 登录态只看 token(见 utils/auth.js):
+			// isLogin 缓存标记与真实登录态可能不同步(静默重登 / 401 清缓存路径), 会错判成"未登录"
+			if (isLoggedIn()) {
 				this.getAccount()
 				this.loadMyCards()
 				this.loadTodayBooking()

@@ -93,6 +93,7 @@
 		getSeat,
 		getSeatPositions
 	} from '@/config/api.js'
+import { isLoggedIn } from '@/utils/auth.js'
 	export default {
 		data() {
 			return {
@@ -336,8 +337,8 @@
 				}
 			}
 			// 未登录: 预约需登录, 明确提示并返回
-			const isLogin = uni.getStorageSync('isLogin')
-			if (isLogin !== true && isLogin !== 'true' && isLogin !== 1) {
+			// 登录态只看 token(见 utils/auth.js): 缓存标记与真实登录态可能不同步
+			if (!isLoggedIn()) {
 				uni.showModal({
 					title: '请先登录',
 					content: '预约选座需要先登录，是否前往「我的」页登录？',

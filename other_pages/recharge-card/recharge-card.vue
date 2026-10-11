@@ -128,6 +128,7 @@
 		getBalance,
 		myPoints
 	} from '@/config/api.js'
+import { isLoggedIn } from '@/utils/auth.js'
 	import { mapState } from 'vuex'
 	export default {
 		computed: {
@@ -274,8 +275,8 @@
 			async pay() {
 				const that = this
 				console.info(this.card)
-				const isLogin = uni.getStorageSync('isLogin')
-				if (isLogin !== true) {
+				// 登录态只看 token(见 utils/auth.js) —— 缓存标记 isLogin 可能缺, 会造成"已登录却说请先登录"
+				if (!isLoggedIn()) {
 					uni.$u.toast('请先登录')
 					return
 				}
