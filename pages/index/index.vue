@@ -549,7 +549,11 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		},
 		onShow() {
 			this.setIndex(0)
-			this.loadDoorAvailable()
+			// 只在已登录时查开门可用性: 未登录时这个接口必然 401, 会白白触发一次静默重登
+			// (而每次静默重登都会把上一个 token 顶下线 —— 别在首页制造这种无意义的 401)
+			if (isLoggedIn()) {
+				this.loadDoorAvailable()
+			}
 			// 登录态只看 token(见 utils/auth.js):
 			// isLogin 缓存标记与真实登录态可能不同步(静默重登 / 401 清缓存路径), 会错判成"未登录"
 			if (isLoggedIn()) {

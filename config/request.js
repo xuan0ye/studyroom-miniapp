@@ -57,7 +57,13 @@ function relogin() {
 			reloginPromise = null
 		})
 	}
-	return reloginPromise
+	// 给"重登本身失败"打标记 —— 只有这种情况才该清掉本地登录态。
+	// 调用方必须区分"重登失败"与"重放请求失败", 见 handleUnauthorized。
+	return reloginPromise.catch((e) => {
+		const err = new Error((e && (e.msg || e.errMsg || e.message)) || '重新登录失败')
+		err.reloginFailed = true
+		throw err
+	})
 }
 
 // 递归归一化所有头像字段: 后端可能返回裸 base64(缺 data:image 前缀), 统一补前缀,
@@ -108,10 +114,16 @@ function handleUnauthorized(response, data, custom) {	const config = response &&
 					_reloginRetried: true
 				}
 			})
-		}).catch(() => {
-			// 重登失败：清空登录态并提示
-			uni.removeStorageSync('token')
-			uni.removeStorageSync('isLogin')
+		}).catch((err) => {
+			// ⚠ 必须区分两种失败(2026-10-11 修):
+			//   ① 重登本身失败(err.reloginFailed) → 确实登录失效, 清掉本地登录态并提示;
+			//   ② 重放请求失败(弱网 / 5xx / 并发被顶下线) → 只是这一次请求没成, **绝不能删 token**。
+			// 老代码把两者写在同一个 catch 里, 于是任何一次重放失败都会 removeStorageSync('token'),
+			// 表现就是"明明登录着, 进预约页却提示请先登录, 回我的页退出重登一次才好" —— 这个 bug 反复出现过。
+			if (err && err.reloginFailed === true) {
+				uni.removeStorageSync('token')
+				uni.removeStorageSync('isLogin')
+			}
 			if (!custom || (custom.toast !== false && !custom.catch)) {
 				uni.$u.toast("登录已过期，请重新登录")
 			}
