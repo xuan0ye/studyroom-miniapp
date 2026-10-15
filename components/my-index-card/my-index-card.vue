@@ -17,37 +17,36 @@
 					</view>
 				</view>
 			</view>
+			<!--
+				2026-10-15 改版(合规): 下线「余额充值」入口 —— 小程序内不再提供用户自助充值/储值,
+				避免被判定为虚拟货币/虚拟商品。改为两块「到店服务」入口: 到店自习套餐 + 团购核销。
+				注意: 余额功能本身保留(下单抵扣、团购代金券核销入账、客服退款仍用余额), 只是不再让用户充值。
+			-->
 			<view class="sub-row">
-				<view class="recharge">
-					<view class="my-card-bg" @click="toRecharge">
-						<view style="position: absolute; top: 20rpx; left: 20rpx;">
-							<u-text :bold="true" size="34" color="#ffffff" text="余额充值" />
-							<view style="height: 8rpx;"></view>
-							<u-text :bold="false" size="22" color="#ffffff" text="充值到余额" />
-						</view>
-						<view style="position: absolute; bottom: 0px; right: 0px;">
-							<u-icon name="https://api.dayousuoan.top/upload/appstatic/index/pay.png" size="96" color="#0ec61b"></u-icon>
-						</view>
+				<view class="entry-half" @click="toCard">
+					<view class="entry-bg entry-card"></view>
+					<view style="position: absolute; top: 30rpx; left: 30rpx;">
+						<u-icon name="https://api.dayousuoan.top/upload/appstatic/index/bag.png" size="40"></u-icon>
+					</view>
+					<view style="position: absolute; top: 22rpx; right: 30rpx;">
+						<u-text :bold="true" size="34" color="#ffffff" text="到店自习套餐" />
+					</view>
+					<view style="position: absolute; bottom: 24rpx; right: 30rpx;">
+						<u-text :bold="false" size="22" color="#eafaff" text="时段服务 · 到店使用" />
 					</view>
 				</view>
-				<view class="recharge-right">
-					<view class="pay-card" @click="toCard">
-						<view style=" position:absolute; top:26rpx; left: 60rpx;">
-							<u-icon name="https://api.dayousuoan.top/upload/appstatic/index/bag.png" size="36"></u-icon>
-						</view>
-						<view style=" position:absolute; top:18rpx; right: 60rpx;">
-							<u-text :bold="true" size="34" color="#ffffff" text="卡券套餐" />
-						</view>
+				<view class="entry-half entry-right" @click="toDouyinVerify">
+					<view class="entry-bg entry-douyin"></view>
+					<view style="position: absolute; top: 34rpx; left: 30rpx;">
+						<!-- 方案D: 抖音官方 Logo 音符(青红渐变), 由官方 SVG 路径烘焙成透明 PNG -->
+						<image class="dy-note" src="/static/index/douyin-note.png" mode="aspectFit" />
 					</view>
-					<view class="mt-card" @click="toDouyinVerify">
-						<view style=" position:absolute; top:24rpx; left: 60rpx;">
-							<!-- 方案D: 抖音官方 Logo 音符(青红渐变), 由官方 SVG 路径烘焙成透明 PNG -->
-							<image class="dy-note" src="/static/index/douyin-note.png" mode="aspectFit" />
-						</view>
-						<view style=" position:absolute; top:18rpx; right: 60rpx;">
-							<!-- 方案D: 渐变字必须直接写在 text 上, 套在 u-text 外层不生效(会隐形) -->
-							<text class="dy-title">团购核销</text>
-						</view>
+					<view style="position: absolute; top: 26rpx; right: 30rpx;">
+						<!-- 方案D: 渐变字必须直接写在 text 上, 套在 u-text 外层不生效(会隐形) -->
+						<text class="dy-title">团购核销</text>
+					</view>
+					<view style="position: absolute; bottom: 24rpx; right: 30rpx;">
+						<u-text :bold="false" size="22" color="#cfcfcf" text="抖音团购券到店使用" />
 					</view>
 				</view>
 			</view>
@@ -70,6 +69,8 @@
 				})
 			},
 			toRecharge() {
+				// 2026-10-15 合规改版: 首页不再提供充值入口。
+				// 保留方法仅为兼容历史调用(如其它页面误引用), 页面内已无入口。
 				uni.navigateTo({
 					url: "/other_pages/recharge/recharge"
 				})
@@ -123,43 +124,34 @@
 		padding: 0 40rpx;
 	}
 
-	.recharge {
+	// 2026-10-15: 原来左侧是「余额充值」+ 右侧两块小卡; 现在改为左右两块等大的到店服务入口
+	.entry-half {
 		position: absolute;
 		left: 40rpx;
 		height: 200rpx;
 		width: 330rpx;
 	}
 
-	.my-card-bg {
-		position: absolute;
-		height: 200rpx;
-		width: 330rpx;
-		border-radius: 10rpx;
-		background-color: #0c9d16;
-	}
-
-	.recharge-right {
-		position: absolute;
+	.entry-right {
+		left: auto;
 		right: 40rpx;
+	}
+
+	.entry-bg {
+		position: absolute;
 		height: 200rpx;
 		width: 330rpx;
+		border-radius: 10rpx;
 	}
 
-	.pay-card {
-		position: absolute;
-		height: 96rpx;
-		width: 330rpx;
-		border-radius: 10rpx;
+	/* 到店自习套餐(原「卡券套餐」) */
+	.entry-card {
 		background-color: #13bec1;
-
+		box-shadow: 0 6rpx 18rpx rgba(19, 190, 193, 0.35);
 	}
 
-	.mt-card {
-		position: absolute;
-		bottom: 0px;
-		height: 96rpx;
-		width: 330rpx;
-		border-radius: 10rpx;
+	/* 抖音团购核销 */
+	.entry-douyin {
 		background-color: #111111;
 		box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.45);
 	}

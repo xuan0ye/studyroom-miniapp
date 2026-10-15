@@ -87,14 +87,14 @@
 							<u-text :bold="true" size="36" color="#333" :text="result.msg || '核销成功'" />
 						</view>
 						<view class="result-info">
-							<!-- 充值余额类(代金券) -->
+							<!-- 代金券类: 核销后到账门店预付款(余额), 用于抵扣到店服务费用 -->
 							<view class="cert-row" v-if="result.balanceAmount">
-								<u-text size="26" color="#999" text="已充值余额：" />
+								<u-text size="26" color="#999" text="已到账门店预付款：" />
 								<u-text size="26" color="#333" :text="'¥' + result.balanceAmount" />
 							</view>
-							<!-- 发卡类(周期卡) -->
+							<!-- 时段服务类 -->
 							<view class="cert-row" v-if="result.cardTitle">
-								<u-text size="26" color="#999" text="发放卡券：" />
+								<u-text size="26" color="#999" text="已开通到店服务：" />
 								<u-text size="26" color="#333" :text="result.cardTitle" />
 							</view>
 							<view class="cert-row" v-if="result.expiryTime">

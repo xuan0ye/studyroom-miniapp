@@ -59,13 +59,6 @@
 					}
 				},
 				{
-					"path": "recharge/recharge",
-					"style": {
-						"navigationBarTitleText": "",
-						"enablePullDownRefresh": false
-					}
-				},
-				{
 					"path": "recharge-card/recharge-card",
 					"style": {
 						"navigationBarTitleText": "",

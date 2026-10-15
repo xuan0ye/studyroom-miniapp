@@ -20,10 +20,14 @@
 				</view>
 			</view>
 		</view>
-		<view class="foot-button">
-			<view>
-				<u-button color="#35a5ed" size="large" @click="toRecharge" text="立即充值"></u-button>
-			</view>
+		<!--
+			2026-10-15 合规改版: 下线「立即充值」用户自助充值(避免被判为虚拟货币/虚拟商品)。
+			余额保留, 但来源只限于: 团购券核销入账 / 门店退款入账 / 门店人工调整;
+			用途为抵扣到店服务费用, 不可提现、不可转赠。
+		-->
+		<view style="margin: 40rpx 60rpx 0 60rpx;">
+			<u-text :bold="false" size="24" color="#909399" align="left"
+				text="余额说明：余额为门店线下服务的预付款，用于抵扣到店服务费用，不可提现、不可转赠。余额由门店按实际情况入账（团购券核销、退款入账、门店调整），小程序内不提供充值。" />
 		</view>
 	</view>
 </template>
@@ -41,11 +45,7 @@
 			...mapState(['oneToke', 'account']),
 		},
 		methods: {
-			toRecharge() {
-				uni.navigateTo({
-					url: "/other_pages/recharge/recharge"
-				})
-			}
+			// 2026-10-15: 充值入口已下线(合规), 不再跳转充值页
 		},
 		onShow() {}
 	}

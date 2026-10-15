@@ -31,9 +31,6 @@
 						<view style="margin-left: 10rpx;">
 							<u-text :bold="true" size="30" color="#fedd7f" :text="account.balance" align="left" />
 						</view>
-						<view style="margin-left: 20rpx;" @click="toRecharge">
-							<u-text :bold="true" size="30" color="#fc751e" text="充值" align="left" />
-						</view>
 					</view>
 				</view>
 				<u-divider></u-divider>
@@ -134,7 +131,7 @@
 			creatOrder() {
 				const balance = this.account.balance
 				if (balance < this.totalPrice) {
-					uni.$u.toast('余额不足，请先充值！')
+					uni.$u.toast('余额不足，请选择其他方式支付')
 					return
 				}
 				this.pay()
