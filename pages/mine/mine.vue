@@ -306,6 +306,28 @@
 						</u-row>
 					</view>
 				</view>
+				<!-- 服务与门店说明(2026-10-15 新增): 门店地址/营业时间/到店流程/服务规则 -->
+				<view class="item" @click="toServiceInfo">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="background-color: #ffffff;margin-left: 20rpx;width: 60rpx;">
+									<u-icon :bold="false" name="https://api.dayousuoan.top/upload/appstatic/mine/edit.png" size="50"></u-icon>
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text :bold="false" size="36" text="服务与门店说明" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="background-color: #ffffff;margin-right: 20rpx;">
+									<u-text :bold="false" size="24" color="#666666" align="right" text="地址/到店流程" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
 				<!-- 退出登录 -->
 				<view class="item" @click="logout">
 					<view class="rank">
@@ -847,6 +869,12 @@
 			toFeedback() {
 				uni.navigateTo({
 					url: '/other_pages/feedback/feedback'
+				})
+			},
+			/** 服务与门店说明(门店信息/到店流程/服务规则) */
+			toServiceInfo() {
+				uni.navigateTo({
+					url: '/other_pages/service-info/service-info'
 				})
 			},
 			toPoints() {

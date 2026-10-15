@@ -57,7 +57,7 @@
 						</view>
 						<view style="display: flex;flex-direction: column;">
 							<u-icon name="https://api.dayousuoan.top/upload/appstatic/package/seat.png" size="100"></u-icon>
-							<my-seat-area :areaNum="card.usable"></my-seat-area>
+							<my-seat-area :areaNum="card.usable" :cardType="card.cardType"></my-seat-area>
 						</view>
 					</view>
 				</view>

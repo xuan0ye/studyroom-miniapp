@@ -35,6 +35,14 @@
 					<text>和</text>
 					<text style="color: #2B85E4;" @click.stop="toAgreement('privacy')">《隐私政策》</text>
 				</view>
+				<!--
+					服务与门店说明(2026-10-15 新增):
+					门店信息 + 到店流程 + "线下到店服务、非虚拟商品"的声明 —— 放在登录页是为了让平台审核与用户都能第一眼看到。
+				-->
+				<view style="margin-top: 18rpx;">
+					<text style="color: #2B85E4;" @click.stop="toServiceInfo">《服务与门店说明》</text>
+					<text style="color: #999;">（门店地址 · 到店流程 · 服务规则）</text>
+				</view>
 			</view>
 
 			<view style="margin-top: 40px; display: flex; flex-direction: column; align-items: center;">
@@ -74,6 +82,12 @@
 			toAgreement(type) {
 				uni.navigateTo({
 					url: '/other_pages/agreement/agreement?type=' + type
+				})
+			},
+			/** 服务与门店说明(门店信息/到店流程/服务规则) —— 登录页与「我的」页都能进 */
+			toServiceInfo() {
+				uni.navigateTo({
+					url: '/other_pages/service-info/service-info'
 				})
 			},
 			handleGetPhoneNumber(e) {

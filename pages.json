@@ -38,6 +38,13 @@
 					}
 				},
 				{
+					"path": "service-info/service-info",
+					"style": {
+						"navigationBarTitleText": "服务与门店说明",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "check-seat/check-seat",
 					"style": {
 						"navigationBarTitleText": "",
