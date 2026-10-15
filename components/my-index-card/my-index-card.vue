@@ -68,13 +68,8 @@
 					url: "/pages/order/order"
 				})
 			},
-			toRecharge() {
-				// 2026-10-15 合规改版: 首页不再提供充值入口。
-				// 保留方法仅为兼容历史调用(如其它页面误引用), 页面内已无入口。
-				uni.navigateTo({
-					url: "/other_pages/recharge/recharge"
-				})
-			},
+			// 2026-10-15 合规改版: 首页不再提供充值入口(toRecharge 已删除,
+			// 充值页也已从 pages.json 移除, 避免包内存在任何"用户自助充值"能力)。
 			toCard() {
 				uni.navigateTo({
 					url: "/other_pages/recharge-card/recharge-card"

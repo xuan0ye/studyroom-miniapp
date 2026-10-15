@@ -139,9 +139,7 @@
 			backToSeat() {
 				uni.navigateBack()
 			},
-			toRecharge() {
-				uni.navigateTo({ url: "/other_pages/recharge/recharge" })
-			},
+			// 2026-10-15 合规改版: 本页的充值入口与 toRecharge 已删除(充值页也已从 pages.json 移除)
 			toCard() {
 				uni.navigateTo({ url: "/other_pages/recharge-card/recharge-card" })
 			},
