@@ -94,6 +94,7 @@
 <script>
 	import { dailyConfig, dailyOrder, getMyCard, getSeat } from '@/config/api.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate, cardLockDays, cardWindowText } from '@/utils/card-usable.js'
+	import { goBack as safeGoBack } from '@/utils/nav.js'
 	export default {
 		data() {
 			return {
@@ -314,7 +315,8 @@
 				}
 			},
 			goBack() {
-				uni.navigateBack()
+				// 2026-10-15: 改为安全返回, 页面栈只有 1 层时兜底回首页(见 utils/nav.js)
+				safeGoBack()
 			},
 			goBuyCard() {
 				uni.$u.route('/other_pages/recharge-card/recharge-card')

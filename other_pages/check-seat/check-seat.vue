@@ -94,6 +94,7 @@
 		getSeatPositions
 	} from '@/config/api.js'
 import { isLoggedIn } from '@/utils/auth.js'
+import { goBack as safeGoBack } from '@/utils/nav.js'
 	export default {
 		data() {
 			return {
@@ -177,7 +178,8 @@ import { isLoggedIn } from '@/utils/auth.js'
 				return s
 			},
 			back() {
-				uni.navigateBack()
+				// 2026-10-15: 改为安全返回, 页面栈只有 1 层时兜底回首页(见 utils/nav.js)
+				safeGoBack()
 			},
 			toPayment() {
 				if (this.mode === 'daily') {
@@ -347,7 +349,8 @@ import { isLoggedIn } from '@/utils/auth.js'
 						if (r.confirm) {
 							uni.switchTab({ url: '/pages/mine/mine' })
 						} else {
-							uni.navigateBack()
+							// 2026-10-15: 安全返回, 避免页面栈只有 1 层时无反应
+							safeGoBack()
 						}
 					}
 				})

@@ -70,6 +70,7 @@
 <script>
 	import { login, phone } from '@/config/api.js'
 	import { markNewUserFromLogin, runUserGuide } from '@/utils/user-guide.js'
+	import { goBack as safeGoBack } from '@/utils/nav.js'
 	export default {
 		name: 'my-login',
 		data() {
@@ -134,14 +135,9 @@
 							// 新人引导: 新用户弹「联系客服领体验卡 + 先录人脸再到店」, 老用户检查人脸提醒
 							runUserGuide()
 
-							// 回到上一页或首页
+							// 回到上一页或首页(统一走 utils/nav.js 的安全返回, 栈只有 1 层时兜底)
 							setTimeout(() => {
-								const pages = getCurrentPages()
-								if (pages.length > 1) {
-									uni.navigateBack()
-								} else {
-									uni.switchTab({ url: '/pages/index/index' })
-								}
+								safeGoBack()
 							}, 500)
 						}).catch((err) => {
 							that.loading = false
@@ -150,12 +146,7 @@
 							if (uni.getStorageSync('token')) {
 								uni.$u.toast('登录成功')
 								setTimeout(() => {
-									const pages = getCurrentPages()
-									if (pages.length > 1) {
-										uni.navigateBack()
-									} else {
-										uni.switchTab({ url: '/pages/index/index' })
-									}
+									safeGoBack()
 								}, 500)
 							} else {
 								uni.$u.toast('登录失败，请重试')
@@ -170,12 +161,7 @@
 				})
 			},
 			skipLogin() {
-				const pages = getCurrentPages()
-				if (pages.length > 1) {
-					uni.navigateBack()
-				} else {
-					uni.switchTab({ url: '/pages/index/index' })
-				}
+				safeGoBack()
 			}
 		}
 	}

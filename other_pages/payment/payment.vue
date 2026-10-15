@@ -100,6 +100,7 @@
 		orderSeat,
 		getBalance
 	} from '@/config/api.js'
+	import { goBack as safeGoBack } from '@/utils/nav.js'
 	export default {
 		props: {
 			seat: {
@@ -137,7 +138,8 @@
 				this.pay()
 			},
 			backToSeat() {
-				uni.navigateBack()
+				// 2026-10-15: 改为安全返回, 页面栈只有 1 层时兜底回首页(见 utils/nav.js)
+				safeGoBack()
 			},
 			// 2026-10-15 合规改版: 本页的充值入口与 toRecharge 已删除(充值页也已从 pages.json 移除)
 			toCard() {

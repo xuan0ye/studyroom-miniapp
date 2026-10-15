@@ -14,9 +14,19 @@
 				<u-icon name="arrow-right" color="#35a5ed" size="32"></u-icon>
 			</view>
 		</u-navbar>
-		<u-navbar :leftIcon="leftIcon" :leftText="leftText" :title="title" :autoBack="autoBack" :custom="custom"
+		<!--
+			2026-10-15 修复「点左上角的返回没有任何反应，卡在页面里出不去」：
+			uView 的 autoBack 内部只做一句 uni.navigateBack()，没有任何兜底，
+			而小程序在「页面栈只有 1 层」时该调用会静默失败。触发场景是真实存在的：
+			别人分享的卡片/小程序码/扫码直接打开内页、从服务通知或客服消息点进内页、
+			开发者工具「自定义编译模式」指定启动页、以及任何 reLaunch 之后的落地页。
+			本项目 pages.json 里 globalStyle.navigationStyle = "custom"，所有页面都没有微信原生
+			导航栏，返回完全依赖这个自绘 navbar，所以一旦失败用户就彻底出不去。
+			这里改为由 handleBack 走 utils/nav.js 的安全返回：能返回就返回，不能回就回 tabBar 页。
+		-->
+		<u-navbar :leftIcon="leftIcon" :leftText="leftText" :title="title" :autoBack="false" :custom="custom"
 			:bgColor="bgColor" placeholder="true" :titleStyle="titleStyle" :leftIconSize="leftIconSize"
-			:leftIconColor="leftIconColor" v-else="custom">
+			:leftIconColor="leftIconColor" @leftClick="handleBack" v-else="custom">
 
 		</u-navbar>
 
@@ -28,6 +38,7 @@
 	import {
 		mapState,
 	} from 'vuex'
+	import { goBack } from '@/utils/nav.js'
 	export default {
 		name: "my-navbar",
 		props: {
@@ -95,6 +106,12 @@
 			leftClick() {
 				console.log("navbar")
 				this.$emit('leftClick')
+			},
+			// 统一的安全返回（原因见本文件模板顶部注释与 utils/nav.js）
+			handleBack() {
+				// autoBack=false 的页面（三个 tabBar 页）不接管左侧点击
+				if (!this.autoBack) return
+				goBack()
 			}
 		},
 		mounted() {
