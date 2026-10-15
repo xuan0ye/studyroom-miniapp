@@ -46,7 +46,7 @@
 						<text class="dy-title">团购核销</text>
 					</view>
 					<view style="position: absolute; bottom: 24rpx; right: 30rpx;">
-						<u-text :bold="false" size="22" color="#cfcfcf" text="抖音团购券到店使用" />
+						<u-text :bold="false" size="22" color="#cfcfcf" text="抖音团购自助核销" />
 					</view>
 				</view>
 			</view>
