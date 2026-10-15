@@ -29,10 +29,10 @@
 						<u-icon name="https://api.dayousuoan.top/upload/appstatic/index/bag.png" size="40"></u-icon>
 					</view>
 					<view style="position: absolute; top: 22rpx; right: 30rpx;">
-						<u-text :bold="true" size="34" color="#ffffff" text="到店自习套餐" />
+						<u-text :bold="true" size="34" color="#ffffff" text="卡券套餐" />
 					</view>
 					<view style="position: absolute; bottom: 24rpx; right: 30rpx;">
-						<u-text :bold="false" size="22" color="#eafaff" text="时段服务 · 到店使用" />
+						<u-text :bold="false" size="22" color="#eafaff" text="现在购买，享丝滑自习" />
 					</view>
 				</view>
 				<view class="entry-half entry-right" @click="toDouyinVerify">
