@@ -6,7 +6,7 @@
 			</my-navbar>
 			<view style="margin: auto 40rpx;">
 				<!-- 预约情况 -->
-				<view style=" width: 100%;">
+				<view v-if="seatLoaded" style=" width: 100%;">
 					<view class="seat-head">
 						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages/static/seat.png" size="70"></u-icon>
 						<p style="margin:auto 20rpx;margin-right: 40rpx;">可预约:{{noReservedNum}}</p>
@@ -16,7 +16,10 @@
 				</view>
 				<!-- 新版 3D 平面图与点击坐标随包发布，保留服务器旧坐标供旧版客户使用 -->
 				<!-- 坐标统一相对背景图本身: 背景图占满容器, 座位百分比定位 -->
-				<view class="seatmap" id="seatmap">
+				<view v-if="seatLoading" class="seat-loading"><book-loading :loading="seatLoading" text="正在加载座位图…"></book-loading></view>
+				<view v-else-if="seatLoadError" class="seat-load-error"><text>暂时无法获取座位情况</text><button size="mini" @click="retrySeats">重新加载</button></view>
+				<view v-else-if="seatLoaded && !hasSeats" class="seat-load-error">当前时段暂无可展示的座位</view>
+				<view v-else-if="seatLoaded" class="seatmap" id="seatmap">
 					<!-- 门店布局图背景(占满容器) -->
 					<image :src="seatMapImage" class="seat-bg" mode="widthFix"></image>
 					<!-- 座位层: 仅渲染后端存在的座位(visiblePositions), 点击选座 -->
@@ -92,8 +95,9 @@ import { SEAT_MAP_IMAGE, createSeatPositions } from '@/config/seat-layout.js'
 import { isLoggedIn } from '@/utils/auth.js'
 import { goBack as safeGoBack } from '@/utils/nav.js'
 import SeatOccupant from './components/seat-occupant.vue'
+	import BookLoading from '@/components/book-loading/book-loading.vue'
 	export default {
-		components: { SeatOccupant },
+		components: { SeatOccupant, BookLoading },
 		data() {
 			return {
 				// 页面参数(经 onLoad(options) 注入, uni-app 页面跳转参数不走 props)
@@ -109,6 +113,9 @@ import SeatOccupant from './components/seat-occupant.vue'
 				seatCom: [], //经济区
 				seatVip: [], //舒适区
 				seatMap: {}, //座位号 -> 座位(平面图布局用)
+				seatLoading: false,
+				seatLoaded: false,
+				seatLoadError: false,
 				week: '',
 				reservedNum: 0, //已预约
 				noReservedNum: 0, //可预约
@@ -120,6 +127,7 @@ import SeatOccupant from './components/seat-occupant.vue'
 		},
 		computed: {
 			...mapState(['oneToke', 'store']),
+			hasSeats() { return Object.keys(this.seatMap).length > 0 },
 			// 可见座位: 仅后端真实存在的座位(seatMap 有数据), 后台已删除的座位不显示也不可点
 			visiblePositions() {
 				const out = {}
@@ -183,30 +191,36 @@ import SeatOccupant from './components/seat-occupant.vue'
 				console.log(seat)
 			},
 			async setSeat(start, end, id) {
+				if (!this._seatAlive || this.seatLoading) return
 				const params = {
 					roomId: id,
 					startTime: start,
 					endTime: end
 				}
-				const {
-					data: res
-				} = await getSeat(params, {
-					custom: {
-						auth: true
-					}
-				})
-				console.log("所有座位详情", res)
-				this.seatCom = res.seatCom
-				this.seatVip = res.seatVip
-				this.reservedNum = res.reservedNum
-				this.noReservedNum = res.noReservedNum
-				// 构建 座位号 -> 座位 索引, 供平面图布局按号取座位
-				const map = {}
-				const all = (res.seatCom || []).concat(res.seatVip || [])
-				all.forEach(function(s) {
-					if (s && s.seatNum != null) map[String(s.seatNum)] = s
-				})
-				this.seatMap = map
+				this._seatQuery = params
+				this.seatLoading = true
+				this.seatLoadError = false
+				try {
+					const { data: res } = await getSeat(params, { custom: { auth: true, catch: true, toast: false } })
+					if (!this._seatAlive) return
+					if (!res || !Array.isArray(res.seatCom) || !Array.isArray(res.seatVip)) throw new Error('座位情况暂不可用')
+					this.seatCom = res.seatCom
+					this.seatVip = res.seatVip
+					this.reservedNum = res.reservedNum
+					this.noReservedNum = res.noReservedNum
+					const map = {}
+					res.seatCom.concat(res.seatVip).forEach(s => { if (s && s.seatNum != null) map[String(s.seatNum)] = s })
+					this.seatMap = map
+					this.seatLoaded = true
+				} catch (error) {
+					if (this._seatAlive) this.seatLoadError = true
+				} finally {
+					if (this._seatAlive) this.seatLoading = false
+				}
+			},
+			retrySeats() {
+				const query = this._seatQuery
+				if (query) this.setSeat(query.startTime, query.endTime, query.roomId)
 			},
 			getSeatByNum(n) {
 				return this.seatMap ? this.seatMap[String(n)] : null
@@ -217,6 +231,7 @@ import SeatOccupant from './components/seat-occupant.vue'
 			}
 		},
 		onLoad(options) {
+			this._seatAlive = true
 			// 页面参数: 从 URL options 读取并注入(不能依赖 props)
 			if (options) {
 				if (options.mode != null) this.mode = options.mode
@@ -284,11 +299,15 @@ import SeatOccupant from './components/seat-occupant.vue'
 					}
 				})
 			}
-		}
+		},
+		onUnload() { this._seatAlive = false }
 	}
 </script>
 
 <style lang="scss">
+	.seat-loading { min-height: 420rpx; padding-top: 40rpx; }
+	.seat-load-error { padding: 100rpx 0; color: #738293; font-size: 26rpx; text-align: center; }
+	.seat-load-error button { display: block; margin-top: 28rpx; color: #2586c5; background: #edf7fe; }
 	.seat-head {
 		display: flex;
 		flex-direction: row;

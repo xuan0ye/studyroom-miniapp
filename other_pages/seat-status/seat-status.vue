@@ -11,8 +11,8 @@
 				<button class="current-seats-refresh" size="mini" :loading="loading" :disabled="loading" @click="refresh">刷新</button>
 			</view>
 			<view class="current-seats-state" v-if="!snapshot">
-				<text>{{ stateText }}</text>
-				<button v-if="state === 'guest'" size="mini" @click="toLogin">去登录</button>
+				<book-loading v-if="loading" :loading="loading" text="正在整理当前座位…"></book-loading>
+				<template v-else><text>{{ stateText }}</text><button v-if="state === 'guest'" size="mini" @click="toLogin">去登录</button></template>
 			</view>
 			<template v-if="snapshot">
 				<view class="current-seats-meta"><text>已预约 {{ snapshot.occupied }} / 共 {{ snapshot.total }} 席</text><text>{{ updatedLabel }} 更新</text></view>
@@ -36,8 +36,10 @@
 	import { getCurrentSeats, seatQueryTime } from '@/utils/current-seats.js'
 	import { SEAT_MAP_IMAGE, createSeatPositions } from '@/config/seat-layout.js'
 	import { isLoggedIn } from '@/utils/auth.js'
+	import BookLoading from '@/components/book-loading/book-loading.vue'
 
 	export default {
+		components: { BookLoading },
 		data() {
 			return { roomId: null, snapshot: null, loading: false, state: 'loading', mapImage: SEAT_MAP_IMAGE }
 		},
@@ -87,6 +89,7 @@
 				}
 				const requestId = ++this._requestId
 				this.loading = true
+				if (!this.snapshot) this.state = 'loading'
 				try {
 					const snapshot = await getCurrentSeats(this.roomId)
 					if (this._alive && requestId === this._requestId) {

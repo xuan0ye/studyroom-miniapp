@@ -97,45 +97,23 @@
 				<my-index-ER></my-index-ER>
 			</view>
 			<!-- 热门活动(内容由后台「门店管理→热门活动」维护, 无数据则整块不显示) -->
-			<view class="content-hot" v-if="promoList.length > 0">
-				<view>
-					<u-text :bold="true" size="24" color="#6a6a6a" :selectable="false" text="热门活动" />
+			<view class="content-hot" v-if="promoList.length > 0 || promoLoading">
+				<view class="promo-heading"><text class="promo-heading-title">热门活动</text><text class="promo-heading-note">答岸 · 自习时光</text></view>
+				<view v-if="promoLoading && !promoList.length" class="promo-loading">
+					<book-loading :loading="promoLoading"></book-loading>
 				</view>
-				<view class="hot-list" v-for="(item, pi) in promoList" :key="pi">
-					<view style="margin-bottom: 40rpx;">
-						<view class="hot-list-item" @click="toPromo(item)">
-							<u-row gutter="6rpx">
-								<u-col span="8">
-									<view style="margin-left: 20rpx; margin-top: 30rpx;">
-										<u-text :bold="true" size="36" color="#0f0f0f" :text="item.title" />
-									</view>
-									<view style="margin-left: 20rpx; margin-top: 12rpx;" v-if="item.subtitle">
-										<u-text size="24" color="#8a8a8a" :text="item.subtitle" />
-									</view>
-									<view style="display: flex; align-items: center; margin-left: 20rpx; margin-top: 18rpx;">
-										<u-text :bold="true" size="40" color="#fe2c55" :text="'¥' + fmtPrice(item.price)" />
-										<u-text size="22" color="#8a8a8a" :text="item.priceUnit || ''"
-											style="margin-left: 6rpx;" />
-										<u-text v-if="item.originalPrice" size="22" color="#bbbbbb"
-											:text="'原价 ¥' + fmtPrice(item.originalPrice)"
-											style="margin-left: 14rpx; text-decoration: line-through;" />
-									</view>
-								</u-col>
-								<u-col span="4">
-									<view style="margin-right: 40rpx;">
-										<u-image v-if="item.imageUrl" :src="item.imageUrl" mode="aspectFit"
-											height="210rpx" width="210rpx"></u-image>
-									</view>
-								</u-col>
-							</u-row>
+				<view v-for="item in promoList" :key="item.id" class="promo-card" role="button" :aria-label="'查看活动：' + item.title" @click="toPromo(item)">
+					<view class="promo-top">
+						<view class="promo-image">
+							<image v-if="item.imageUrl && !item.imageFailed" :src="item.imageUrl" mode="aspectFit" @error="item.imageFailed = true"></image>
+							<text v-else class="promo-image-fallback">答岸</text>
 						</view>
-						<view style="display: flex; align-items: center;" @click="toPromo(item)">
-							<u-icon name="arrow-rightward" size="32" label="查看详情" :bold="true" labelSize="26"
-								labelColor="#35a5ed" labelPos="left"></u-icon>
-							<view v-if="item.tag" style="margin-left: 16rpx;">
-								<u-tag :text="item.tag" type="warning" size="mini" />
-							</view>
-						</view>
+						<view class="promo-copy"><text v-if="item.tag" class="promo-tag">{{ item.tag }}</text><text class="promo-title">{{ item.title }}</text><text v-if="item.subtitle" class="promo-subtitle">{{ item.subtitle }}</text></view>
+					</view>
+					<view class="promo-footer">
+						<view v-if="hasPromoPrice(item.price)" class="promo-price"><text class="promo-currency">¥</text><text class="promo-amount">{{ fmtPrice(item.price) }}</text><text class="promo-unit">{{ promoUnit(item.priceUnit, item.price) }}</text><text v-if="hasPromoPrice(item.originalPrice) && Number(item.originalPrice) > Number(item.price)" class="promo-original">¥{{ fmtPrice(item.originalPrice) }}</text></view>
+						<text v-else class="promo-price-empty">了解活动与适用规则</text>
+						<view class="promo-action"><text>查看详情</text><u-icon name="arrow-right" size="22" color="#2586c5"></u-icon></view>
 					</view>
 				</view>
 
@@ -192,7 +170,10 @@
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	import { isLoggedIn } from '@/utils/auth.js'
 import { runUserGuide } from '@/utils/user-guide.js'
+	import BookLoading from '@/components/book-loading/book-loading.vue'
+	import { hasPromoPrice, formatPromoPrice, formatPromoUnit } from '@/utils/promo-display.js'
 	export default {
+		components: { BookLoading },
 		data() {
 			return {
 				swiperList: [],
@@ -207,6 +188,7 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			doorOpenEnabled: false,
 				myCards: [],
 				promoList: [],
+				promoLoading: false,
 				// 通知公告(后台「系统管理-通知公告」): 最新在前, 首页只显示第一条, 点开看全部
 				noticeList: [],
 				noticeShow: false
@@ -241,6 +223,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			},
 			// 首页热门活动(后台可编辑): 取上架中的活动, 无数据则整块不显示
 			async loadPromo() {
+				if (this.promoLoading) return
+				this.promoLoading = true
 				try {
 					const res = await getPromoList({}, { custom: { catch: true, toast: false } })
 					const list = (res && res.data) ? res.data : []
@@ -257,21 +241,20 @@ import { runUserGuide } from '@/utils/user-guide.js'
 							try {
 								host = require('@/config/config.js').currentHost()
 							} catch (e) {}
-							p.imageUrl = host + u
+							u = host + u
 						}
-						return p
+						return { ...p, imageUrl: u, imageFailed: false }
 					})
 				} catch (e) {
 					this.promoList = []
+				} finally {
+					this.promoLoading = false
 				}
 			},
 			// 价格展示: 799 -> 799, 799.5 -> 799.50
-			fmtPrice(v) {
-				if (v === null || v === undefined || v === '') return ''
-				const n = Number(v)
-				if (isNaN(n)) return String(v)
-				return n % 1 === 0 ? String(n) : n.toFixed(2)
-			},
+			fmtPrice: formatPromoPrice,
+			promoUnit: formatPromoUnit,
+			hasPromoPrice,
 			// 点击活动: 优先用后台配置的跳转路径, 没配则去卡券套餐
 			toPromo(item) {
 				const url = item && item.linkUrl ? String(item.linkUrl) : ''
@@ -630,27 +613,29 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		background-color: $u-bg-color;
 	}
 
-	.content-hot {
-		margin: auto 40rpx;
-		margin-top: 40rpx;
-
-	}
-
-	.hot-list {}
-
-	.hot-list-item {
-		// position: relative;
-		padding: auto 20rpx;
-		margin: 20rpx auto;
-		height: 210rpx;
-		background-color: #FFFFFF;
-		border-radius: 20rpx;
-	}
-
-	.item-image {
-		// position: absolute;
-
-	}
+	.content-hot { margin: 40rpx 40rpx 0; }
+	.content-hot .promo-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36rpx; }
+	.content-hot .promo-heading-title { color: #26394c; font-size: 36rpx; font-weight: 600; }
+	.content-hot .promo-heading-note { margin-left: 24rpx; color: #7d8c9c; font-size: 22rpx; }
+	.content-hot .promo-loading { min-height: 330rpx; }
+	.content-hot .promo-card { box-sizing: border-box; padding: 32rpx; margin-bottom: 32rpx; background: #ffffff; color: #26394c; border-radius: 34rpx; box-shadow: 0 8rpx 36rpx rgba(37,69,95,.035); }
+	.content-hot .promo-top { display: flex; align-items: center; }
+	.content-hot .promo-image { display: flex; align-items: center; justify-content: center; width: 176rpx; height: 200rpx; flex-shrink: 0; overflow: hidden; border-radius: 22rpx; background: #f0f6fa; }
+	.content-hot .promo-image image { display: block; width: 100%; height: 100%; }
+	.content-hot .promo-image-fallback { padding: 20rpx; color: #6c92ae; font-size: 28rpx; line-height: 44rpx; text-align: center; white-space: pre-line; }
+	.content-hot .promo-copy { flex: 1; min-width: 0; margin-left: 28rpx; }
+	.content-hot .promo-tag { display: inline-block; padding: 6rpx 14rpx; border-radius: 10rpx; background: #edf7fe; color: #2586c5; font-size: 22rpx; line-height: 32rpx; }
+	.content-hot .promo-title { display: block; margin-top: 14rpx; color: #26394c; font-size: 32rpx; font-weight: 600; line-height: 48rpx; word-break: break-word; }
+	.content-hot .promo-subtitle { display: block; margin-top: 10rpx; color: #738293; font-size: 24rpx; line-height: 40rpx; word-break: break-word; }
+	.content-hot .promo-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 30rpx; padding-top: 24rpx; border-top: 1rpx solid #edf1f5; }
+	.content-hot .promo-price { display: flex; flex-wrap: wrap; align-items: baseline; color: #ac5d29; }
+	.content-hot .promo-currency { font-size: 28rpx; margin-right: 6rpx; }
+	.content-hot .promo-amount { font-size: 54rpx; line-height: 66rpx; font-weight: 600; }
+	.content-hot .promo-unit { margin-left: 6rpx; color: #738293; font-size: 24rpx; }
+	.content-hot .promo-original { margin-left: 18rpx; color: #97a2ae; font-size: 22rpx; text-decoration: line-through; }
+	.content-hot .promo-price-empty { color: #738293; font-size: 22rpx; }
+	.content-hot .promo-action { display: flex; align-items: center; flex-shrink: 0; min-height: 60rpx; margin-left: 12rpx; color: #2586c5; font-size: 24rpx; }
+	.content-hot .promo-action text { margin-right: 12rpx; }
 
 	.today-light-card {
 		display: flex;
