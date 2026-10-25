@@ -10,25 +10,23 @@
 					<view class="seat-head">
 						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages/static/seat.png" size="70"></u-icon>
 						<p style="margin:auto 20rpx;margin-right: 40rpx;">可预约:{{noReservedNum}}</p>
-						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages/static/seat-fill.png" size="70"></u-icon>
+						<image src="/other_pages/static/daan-study-mascot.png" class="seat-head-figure" mode="aspectFit"></image>
 						<p style="margin:auto 20rpx;">已预约:{{reservedNum}}</p>
 					</view>
 				</view>
-				<!-- 座位平面图: 背景=门店布局图(固定布局, 坐标从服务器加载) -->
+				<!-- 新版 3D 平面图与点击坐标随包发布，保留服务器旧坐标供旧版客户使用 -->
 				<!-- 坐标统一相对背景图本身: 背景图占满容器, 座位百分比定位 -->
 				<view class="seatmap" id="seatmap">
 					<!-- 门店布局图背景(占满容器) -->
-					<image src="/static/index/seat-layout.jpg" class="seat-bg" mode="widthFix"></image>
+					<image :src="seatMapImage" class="seat-bg" mode="widthFix"></image>
 					<!-- 座位层: 仅渲染后端存在的座位(visiblePositions), 点击选座 -->
 					<view v-for="(pos, seatNum) in visiblePositions" :key="seatNum" class="seat-abs"
 						:style="{ left: pos.x + '%', top: pos.y + '%' }" @click="onSeatTap(seatNum)">
 						<!-- 未预约: 什么都不渲染, 背景图上的座位号直接可见, 仅保留可点击区域 -->
 						<template v-if="getSeatByNum(seatNum).status == true"></template>
-						<!-- 已预约且有头像: 显示头像标记 -->
-						<image v-else-if="getSeatByNum(seatNum).occupantAvatar"
-							:src="normAvatar(getSeatByNum(seatNum).occupantAvatar)" class="seat-avatar"></image>
-						<!-- 已预约无头像: 显示已预约图标 -->
-						<u-icon v-else name="https://api.dayousuoan.top/upload/appstatic/other_pages/static/seat-fill.png" size="48"></u-icon>
+						<!-- 未公开头像时用答岸学习吉祥物；公开头像加载失败时也有本地兜底 -->
+						<seat-occupant v-else :avatar="normAvatar(getSeatByNum(seatNum).occupantAvatar)"
+							:seat-num="seatNum"></seat-occupant>
 					</view>
 				</view>
 			</view>
@@ -69,10 +67,10 @@
 				<view style="margin-top: 40rpx;"></view>
 				<u-text :bold="false" size="28" color="#303133" :text="seat.areaName+' '+seat.seatNum+'号'"
 					align="center" />
-					<view v-if="seat.occupantAvatar" style="display: flex; justify-content: center; align-items: center; margin-top: 20rpx;">
-						<image :src="normAvatar(seat.occupantAvatar)" style="width: 88rpx; height: 88rpx; border-radius: 50%; border: 2rpx solid #35a5ed;"></image>
+					<view v-if="seat.status == false" class="seat-occupant-detail">
+						<seat-occupant :avatar="normAvatar(seat.occupantAvatar)" :seat-num="seat.seatNum" :detail="true"></seat-occupant>
 					</view>
-					<u-text v-if="seat.occupantAvatar" :bold="false" size="24" color="#999" text="该座位已被占用" align="center"
+					<u-text v-if="seat.status == false" :bold="false" size="24" color="#7c8796" text="该时段已被预约" align="center"
 						style="margin-top: 10rpx; display: block;" />
 					<view style="margin: 40rpx 20rpx;">
 						<u-button v-if="seat.status != false" color="#35a5ed" size="large" @click="toPayment" text="确认座位"></u-button>
@@ -89,13 +87,13 @@
 	import {
 		mapState,
 	} from 'vuex'
-	import {
-		getSeat,
-		getSeatPositions
-	} from '@/config/api.js'
+	import { getSeat } from '@/config/api.js'
+import { SEAT_MAP_IMAGE, createSeatPositions } from '@/config/seat-layout.js'
 import { isLoggedIn } from '@/utils/auth.js'
 import { goBack as safeGoBack } from '@/utils/nav.js'
+import SeatOccupant from './components/seat-occupant.vue'
 	export default {
+		components: { SeatOccupant },
 		data() {
 			return {
 				// 页面参数(经 onLoad(options) 注入, uni-app 页面跳转参数不走 props)
@@ -111,33 +109,13 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 				seatCom: [], //经济区
 				seatVip: [], //舒适区
 				seatMap: {}, //座位号 -> 座位(平面图布局用)
-				// ========== 座位平面图（改这里就能改布局） ==========
-				// 规则：
-				// 1. 二维数组，每个内层数组 = 平面图上的一排座位（从左到右）
-				// 2. 数字 = 座位号（对应后端 sr_seat.seat_num），0 = 空位（占位保持对齐）
-				// 3. 从上到下 = 图的上方到下方；0 越多 = 该排越靠右/间隙越大
-				// 4. 座位必须都在 1-22 内且不重复，否则点不到/显示错位
-				// 示例：[7,8,9] 表示一排三个座位 7 8 9；[7,0,8] 表示 7 和 8 中间隔一个空位
-				// ==================================================
-				seatLayout: [
-					// ===== 静音区(图右上) =====
-					[19, 18, 17, 16, 0, 0, 0],   // 上排
-					[0, 0, 0, 13, 14, 15, 0],    // 中排
-					[22, 21, 20, 0, 0, 0, 0],    // 右墙竖排(图上竖列, 此处近似横排显示)
-					// ===== 轻音区(图左中) =====
-					[7, 12, 0, 0, 0, 0, 0],      // 7↔12 同排对坐
-					[8, 11, 0, 0, 0, 0, 0],      // 8↔11
-					[9, 10, 0, 0, 0, 0, 0],      // 9↔10
-					[5, 6, 0, 0, 0, 0, 0],       // 轻音区下方
-					// ===== 休息区旁 =====
-					[1, 2, 3, 4, 0, 0, 0]        // 休息区上方一排
-				],
 				week: '',
 				reservedNum: 0, //已预约
 				noReservedNum: 0, //可预约
 				seat: {},
-				// ===== 座位布局坐标(固定, 从服务器加载) =====
-				seatPositions: {} // 座位号 -> {x, y} 百分比坐标(布局图上)
+				// 与当前背景图绑定，避免旧版缓存/共享坐标覆盖新版布局。
+				seatMapImage: SEAT_MAP_IMAGE,
+				seatPositions: createSeatPositions() // 座位号 -> {x, y} 背景图百分比
 			}
 		},
 		computed: {
@@ -233,87 +211,6 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 			getSeatByNum(n) {
 				return this.seatMap ? this.seatMap[String(n)] : null
 			},
-			// ===== 布局图编辑(点图下方文字进入, 拖动座位保存) =====
-			// 优先级: 服务器(所有设备共享) > 本地缓存(v3) > 本地旧版(v1/v2迁移) > 默认排布
-			async loadPositions() {
-				const that = this
-				const roomId = this.getRoomId()
-				// 1. 先尝试从服务器拉取(解决真机/换机坐标丢失; 该接口免登录白名单, 无需带token)
-				try {
-					const res = await getSeatPositions({ roomId }, {
-						custom: { auth: false, catch: true, toast: false }
-					})
-					// 兼容三种返回形态: res.data 为对象 / res.data 为JSON字符串 / 旧后端把JSON放 res.msg
-					let parsed = null
-					const d = res && res.data
-					const m = res && res.msg
-					if (d && typeof d === 'string' && d.trim()) {
-						try { parsed = JSON.parse(d) } catch (e2) {}
-					} else if (d && typeof d === 'object') {
-						parsed = d
-					} else if (m && typeof m === 'string' && m.trim() && m.indexOf('{') === 0) {
-						try { parsed = JSON.parse(m) } catch (e2) {}
-					}
-					if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-						this.seatPositions = parsed
-						// 同步到本地缓存(离线/弱网时仍可用)
-						uni.setStorageSync('studyroom.seatPositions.v3', parsed)
-						return
-					}
-				} catch (e) {}
-				// 2. 本地缓存 v3(最新版: 背景图占满容器, 坐标直接相对背景图)
-				let saved = uni.getStorageSync('studyroom.seatPositions.v3')
-				if (!saved || typeof saved !== 'object' || Object.keys(saved).length === 0) {
-					// v2/v1: 旧版(容器含 padding 12, 背景图 646 从 12 处开始) 数据 → 迁移到背景图坐标系
-					const old = uni.getStorageSync('studyroom.seatPositions.v2') ||
-						uni.getStorageSync('studyroom.seatPositions.v1')
-					if (old && typeof old === 'object' && Object.keys(old).length > 0) {
-						saved = {}
-						// 旧容器: 宽 670(border-box 含 padding 24), 背景图宽 646 起点 12
-						// 新容器: 背景图占满 670, 起点 0 → 新x = (旧x/100*670 - 12)/646*100
-						Object.keys(old).forEach(k => {
-							const p = old[k]
-							if (!p || p.x == null || p.y == null) return
-							saved[k] = {
-								x: Math.round(((p.x / 100 * 670 - 12) / 646) * 1000) / 10,
-								y: Math.round(((p.y / 100 * 725 - 12) / 701) * 1000) / 10
-							}
-						})
-					}
-				}
-				if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
-					this.seatPositions = saved
-				} else {
-					this.buildDefaultPositions()
-				}
-			},
-			getRoomId() {
-				try {
-					let store = null
-					try { store = JSON.parse(uni.getStorageSync('store')) } catch (e) { store = null }
-					if (store && store.roomId) return store.roomId
-					if (this.store && this.store.roomId) return this.store.roomId
-				} catch (e) {}
-				return null
-			},
-			// 从 seatLayout 网格推导初始坐标(第一次进入时用)
-			buildDefaultPositions() {
-				const pos = {}
-				const rows = this.seatLayout.length
-				let maxCols = 0
-				this.seatLayout.forEach(r => { if (r.length > maxCols) maxCols = r.length })
-				this.seatLayout.forEach((row, ri) => {
-					row.forEach((n, ci) => {
-						if (n) {
-							pos[String(n)] = {
-								x: Math.round(((ci + 0.5) / maxCols) * 1000) / 10,
-								y: Math.round(((ri + 0.5) / rows) * 1000) / 10
-							}
-						}
-					})
-				})
-				this.seatPositions = pos
-			},
 			onSeatTap(num) {
 				const seat = this.getSeatByNum(num)
 				if (seat) this.showSeat(seat)
@@ -375,7 +272,6 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 			}
 			if (store && store.roomId) {
 				this.setSeat(start, end, store.roomId)
-				this.loadPositions()
 			} else {
 				// 已登录但无门店信息: 引导先回首页选门店
 				uni.showModal({
@@ -403,6 +299,20 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 		margin: 40rpx auto;
 		color: #4d4d4d;
 	}
+	.seat-head-figure {
+		width: 52rpx;
+		height: 52rpx;
+		box-sizing: border-box;
+		border: 2rpx solid #ffffff;
+		border-radius: 50%;
+		background: linear-gradient(145deg, #f3faff, #d9ebf8);
+		box-shadow: 0 2rpx 6rpx rgba(40, 76, 106, 0.16);
+	}
+	.seat-occupant-detail {
+		display: flex;
+		justify-content: center;
+		margin: 24rpx 0 18rpx;
+	}
 
 	.vip {
 		background-color: #FFFFFF;
@@ -411,9 +321,7 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 		margin-bottom: 20rpx;
 	}
 
-	// 平面图式座位布局: 背景图 + 座位绝对定位
-	// 关键: 背景图占满容器(无 padding), 座位百分比直接相对背景图,
-	// 编辑模式容器宽度 = 670×scale(背景图等比放大), 非编辑 = 670, 百分比天然一致, 无需任何换算
+	// 背景图占满容器，座位百分比直接相对背景图。
 	.seatmap {
 		position: relative;
 		background-color: #FFFFFF;
@@ -422,19 +330,18 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 		overflow: hidden;
 		box-sizing: border-box;
 	}
-	// 编辑模式地图滚动容器(无 padding, 内部 seatmap 直接撑开滚动区域)
 	.seat-bg {
 		width: 100%;
 		display: block;
 		border-radius: 12rpx;
 	}
 	// 座位定位层: 非编辑模式只是透明点击区(未预约时背景图座位号直接可见)
-	// 点击区 48rpx 贴合背景图上的座位号方块大小, 避免误触相邻座位
+	// 新图的 5/6、20/21 相邻较近，42rpx 点击区避免边缘重叠。
 	.seat-abs {
 		position: absolute;
 		transform: translate(-50%, -50%);
-		width: 48rpx;
-		height: 48rpx;
+		width: 42rpx;
+		height: 42rpx;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -481,13 +388,6 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 		color: #ffffff;
 		font-size: 22rpx;
 		font-weight: bold;
-	}
-	.seat-avatar {
-		width: 48rpx;
-		height: 48rpx;
-		border-radius: 50%;
-		background-color: #e6e6e6;
-		border: 2rpx solid #35a5ed;
 	}
 	.map-spacer {
 		width: 60rpx;

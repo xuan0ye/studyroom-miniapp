@@ -32,6 +32,7 @@
 								<u-switch v-model="showAvatar" size="40" activeColor="#35a5ed"
 									@change="onShowAvatarChange"></u-switch>
 							</view>
+							<view class="avatar-public-hint">关闭后，显示答岸学习小伙伴</view>
 						</view>
 						<view v-else style="padding-left: 40rpx;">
 							<u-button type="success" @click="getUserInfo" size="normal" icon="weixin-fill"
@@ -1030,6 +1031,12 @@
 				align-items: center;
 				margin-top: 12rpx;
 				gap: 16rpx;
+			}
+			.avatar-public-hint {
+				margin-top: 8rpx;
+				color: #a0a7b1;
+				font-size: 20rpx;
+				line-height: 1.5;
 			}
 		}
 

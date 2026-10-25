@@ -4,16 +4,23 @@
 			<!-- 预约选座主入口 -->
 			<view class="book-row" @click="toBook">
 				<view class="book-bg">
-					<view style="position: absolute; top: 30rpx; left: 30rpx;">
+					<view class="book-title">
 						<u-text :bold="true" size="38" color="#ffffff" text="预约选座" />
-						<view style="height: 10rpx;"></view>
-						<u-text :bold="false" size="24" color="#eaf6ff" text="选择门店时间，立即占座" />
 					</view>
-					<view style="position: absolute; bottom: 0px; right: 20rpx;">
+					<view class="book-availability">
+						<text v-if="seatSnapshot && seatSnapshot.total">当前可预约 {{ seatSnapshot.available }} / {{ seatSnapshot.total }} 席</text>
+						<text v-else>{{ seatHint }}</text>
+					</view>
+					<view class="book-chair">
 						<u-icon name="https://api.dayousuoan.top/upload/appstatic/other_pages/static/seat.png" size="96"></u-icon>
 					</view>
-					<view style="position: absolute; bottom: 30rpx; right: 150rpx;">
+					<view class="book-arrow">
 						<u-icon name="arrow-right" color="#ffffff" size="34"></u-icon>
+					</view>
+					<view class="book-seat-bottom">
+						<text class="book-seat-zones" v-if="seatSnapshot && seatSnapshot.total">轻音 {{ seatSnapshot.lightAvailable }} 席 · 静音 {{ seatSnapshot.quietAvailable }} 席</text>
+						<text class="book-seat-zones" v-else>查看当前预约情况</text>
+						<view class="book-seat-view" role="button" aria-label="查看当前座位图" @click.stop="toSeatStatus">查看座位图 ›</view>
 					</view>
 				</view>
 			</view>
@@ -55,14 +62,111 @@
 </template>
 
 <script>
+	import { getCurrentSeats } from '@/utils/current-seats.js'
+	import { isLoggedIn } from '@/utils/auth.js'
 	export default {
 		name: "my-index-card",
 		data() {
 			return {
-
+				seatSnapshot: null,
+				seatState: 'loading'
 			};
 		},
+		computed: {
+			roomId() {
+				const store = this.$store && this.$store.state.store
+				return store && store.roomId
+			},
+			seatHint() {
+				if (!this.roomId) return '请先选择门店'
+				if (this.seatSnapshot && !this.seatSnapshot.total) return '当前门店暂无座位'
+				if (this.seatState === 'guest') return '登录后查看当前余座'
+				if (this.seatState === 'error') return '余座暂未更新'
+				return '正在获取当前余座'
+			}
+		},
+		watch: {
+			roomId() {
+				this.seatSnapshot = null
+				this.refreshSeats()
+			}
+		},
+		created() {
+			this._seatRequestId = 0
+			this._seatAlive = true
+			this._seatTimer = null
+		},
+		mounted() {
+			this.resumeSeats()
+		},
+		onPageShow() {
+			this.resumeSeats()
+		},
+		onPageHide() {
+			this.stopSeatTimer()
+		},
+		beforeDestroy() {
+			this._seatAlive = false
+			this.stopSeatTimer()
+		},
 		methods: {
+			resumeSeats() {
+				this.refreshSeats()
+				this.stopSeatTimer()
+				this._seatTimer = setInterval(() => {
+					const pages = getCurrentPages()
+					if (pages.length && pages[pages.length - 1].route === 'pages/index/index') this.refreshSeats()
+				}, 30000)
+			},
+			stopSeatTimer() {
+				if (this._seatTimer) clearInterval(this._seatTimer)
+				this._seatTimer = null
+			},
+			async refreshSeats() {
+				if (!this._seatAlive) return
+				const roomId = this.roomId
+				const token = uni.getStorageSync('token')
+				if (this._seatPending && this._seatRoom === roomId && this._seatToken === token) return
+				const requestId = ++this._seatRequestId
+				this._seatPending = false
+				if (!roomId || !isLoggedIn()) {
+					this.seatSnapshot = null
+					this.seatState = 'guest'
+					return
+				}
+				this._seatPending = true
+				this._seatRoom = roomId
+				this._seatToken = token
+				if (!this.seatSnapshot) this.seatState = 'loading'
+				try {
+					const snapshot = await getCurrentSeats(roomId)
+					if (this._seatAlive && requestId === this._seatRequestId && this.roomId === roomId) {
+						this.seatSnapshot = isLoggedIn() ? snapshot : null
+						this.seatState = isLoggedIn() ? 'ready' : 'guest'
+					}
+				} catch (error) {
+					if (this._seatAlive && requestId === this._seatRequestId) {
+						this.seatSnapshot = null
+						this.seatState = isLoggedIn() ? 'error' : 'guest'
+					}
+				} finally {
+					if (requestId === this._seatRequestId) this._seatPending = false
+				}
+			},
+			toSeatStatus() {
+				if (!this.roomId) {
+					uni.showToast({ title: '请先选择门店', icon: 'none' })
+					return
+				}
+				if (!isLoggedIn()) {
+					uni.showModal({
+						title: '登录后查看座位', content: '登录后即可查看当前座位情况，无需先预约。', confirmText: '去登录',
+						success: result => { if (result.confirm) uni.switchTab({ url: '/pages/mine/mine' }) }
+					})
+					return
+				}
+				uni.navigateTo({ url: '/other_pages/seat-status/seat-status?roomId=' + encodeURIComponent(this.roomId) })
+			},
 			toBook() {
 				uni.switchTab({
 					url: "/pages/order/order"
@@ -109,6 +213,13 @@
 		background-color: #35a5ed;
 		box-shadow: 0 8rpx 24rpx rgba(53, 165, 237, 0.35);
 	}
+	.my-card .book-title { position: absolute; top: 20rpx; left: 30rpx; }
+	.my-card .book-availability { position: absolute; top: 78rpx; left: 30rpx; right: 120rpx; color: #eaf6ff; font-size: 26rpx; white-space: nowrap; }
+	.my-card .book-chair { position: absolute; bottom: 0; right: 20rpx; pointer-events: none; }
+	.my-card .book-arrow { position: absolute; top: 26rpx; right: 30rpx; pointer-events: none; }
+	.my-card .book-seat-bottom { position: absolute; left: 30rpx; right: 134rpx; bottom: 14rpx; display: flex; align-items: center; justify-content: space-between; }
+	.my-card .book-seat-zones { color: #eaf6ff; font-size: 22rpx; white-space: nowrap; }
+	.my-card .book-seat-view { flex-shrink: 0; margin-left: 16rpx; padding: 8rpx 14rpx; border: 1rpx solid rgba(255,255,255,0.45); border-radius: 10rpx; background: rgba(255,255,255,0.08); color: #ffffff; font-size: 22rpx; line-height: 38rpx; white-space: nowrap; }
 
 	.sub-row {
 		position: absolute;

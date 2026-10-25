@@ -45,6 +45,13 @@
 					}
 				},
 				{
+					"path": "seat-status/seat-status",
+					"style": {
+						"navigationBarTitleText": "当前座位情况",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "check-seat/check-seat",
 					"style": {
 						"navigationBarTitleText": "",
