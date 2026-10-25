@@ -8,7 +8,7 @@
 						<u-text :bold="true" size="38" color="#ffffff" text="预约选座" />
 					</view>
 					<view class="book-availability">
-						<text v-if="seatSnapshot && seatSnapshot.total">当前可预约 {{ seatSnapshot.available }} / {{ seatSnapshot.total }} 席</text>
+						<text v-if="seatSnapshot && seatSnapshot.total">今日可预约 {{ seatSnapshot.available }} / {{ seatSnapshot.total }} 席</text>
 						<text v-else>{{ seatHint }}</text>
 					</view>
 					<view class="book-chair">
@@ -19,8 +19,8 @@
 					</view>
 					<view class="book-seat-bottom">
 						<text class="book-seat-zones" v-if="seatSnapshot && seatSnapshot.total">轻音 {{ seatSnapshot.lightAvailable }} 席 · 静音 {{ seatSnapshot.quietAvailable }} 席</text>
-						<text class="book-seat-zones" v-else>查看当前预约情况</text>
-						<view class="book-seat-view" role="button" aria-label="查看当前座位图" @click.stop="toSeatStatus">查看座位图 ›</view>
+						<text class="book-seat-zones" v-else>查看每日预约情况</text>
+						<view class="book-seat-view" role="button" aria-label="按日期查看座位图" @click.stop="toSeatStatus">查看座位图 ›</view>
 					</view>
 				</view>
 			</view>
@@ -80,9 +80,9 @@
 			seatHint() {
 				if (!this.roomId) return '请先选择门店'
 				if (this.seatSnapshot && !this.seatSnapshot.total) return '当前门店暂无座位'
-				if (this.seatState === 'guest') return '登录后查看当前余座'
+				if (this.seatState === 'guest') return '登录后查看今日余座'
 				if (this.seatState === 'error') return '余座暂未更新'
-				return '正在获取当前余座'
+				return '正在获取今日余座'
 			}
 		},
 		watch: {
@@ -160,7 +160,7 @@
 				}
 				if (!isLoggedIn()) {
 					uni.showModal({
-						title: '登录后查看座位', content: '登录后即可查看当前座位情况，无需先预约。', confirmText: '去登录',
+						title: '登录后查看座位', content: '登录后即可按日期查看座位情况，无需先预约。', confirmText: '去登录',
 						success: result => { if (result.confirm) uni.switchTab({ url: '/pages/mine/mine' }) }
 					})
 					return

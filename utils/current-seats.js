@@ -1,5 +1,6 @@
 import { getSeat } from '@/config/api.js'
 import { createSeatPositions } from '@/config/seat-layout.js'
+import { reservationDate, reservationDay } from '@/utils/reservation-date.js'
 
 // 接口按北京时间解析日期；海外设备也查询同一时刻。
 export function seatQueryTime(date) {
@@ -39,15 +40,15 @@ export function summarizeCurrentSeats(data, capturedAt) {
   }
 }
 
-export async function getCurrentSeats(roomId) {
+export async function getCurrentSeats(roomId, date = reservationDate()) {
   if (!roomId) throw new Error('请先选择门店')
   const now = new Date()
-  now.setMilliseconds(0)
-  // 一秒查询窗口表示此刻，不把当天稍晚的预约也算成现在占座。
+  const day = reservationDay(date)
+  // 预约按天管理，余座与预约页统一查询所选日期的全天占用情况。
   const result = await getSeat({
     roomId,
-    startTime: seatQueryTime(now),
-    endTime: seatQueryTime(new Date(now.getTime() + 1000))
-  }, { custom: { auth: true, catch: true, toast: false } })
-  return summarizeCurrentSeats(result && result.data, now.getTime())
+    startTime: day.startTime,
+    endTime: day.endTime
+  }, { timeout: 10000, custom: { auth: true, catch: true, toast: false } })
+  return { ...summarizeCurrentSeats(result && result.data, now.getTime()), date }
 }

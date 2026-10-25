@@ -66,6 +66,7 @@
 	} from '@/config/api.js'
 	import { isCardUsable } from '@/utils/card-usable.js'
 import { isLoggedIn } from '@/utils/auth.js'
+import { reservationDate, takeReservationDate } from '@/utils/reservation-date.js'
 	export default {
 		data() {
 			return {
@@ -81,6 +82,13 @@ import { isLoggedIn } from '@/utils/auth.js'
 		},
 		methods: {
 			...mapMutations(['setIndex']),
+			updateDateRange() {
+				this.minDate = reservationDate()
+				this.maxDate = reservationDate(new Date(Date.now() + 30 * 86400000))
+				if (!this.selectDate || this.selectDate < this.minDate || this.selectDate > this.maxDate) {
+					this.onDateChange({ detail: { value: this.minDate } })
+				}
+			},
 			closeShowStore() {
 				this.showStore = false
 			},
@@ -171,18 +179,13 @@ import { isLoggedIn } from '@/utils/auth.js'
 			...mapState(['oneToke', 'store', 'storeList'])
 		},
 		onLoad() {
-			var weekArr = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-			var today = new Date()
-			var pad = function(n) { return n < 10 ? '0' + n : '' + n }
-			var todayStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate())
-			var max = new Date(today.getTime() + 30 * 24 * 3600 * 1000)
-			this.minDate = todayStr
-			this.maxDate = max.getFullYear() + '-' + pad(max.getMonth() + 1) + '-' + pad(max.getDate())
-			this.selectDate = todayStr
-			this.dateLabel = '今天 ' + (today.getMonth() + 1) + '月' + today.getDate() + '日 ' + weekArr[today.getDay()]
+			this.updateDateRange()
 		},
 		onShow() {
 			this.setIndex(1)
+			this.updateDateRange()
+			const pendingDate = takeReservationDate(this.store && this.store.roomId, this.minDate, this.maxDate)
+			if (pendingDate) this.onDateChange({ detail: { value: pendingDate } })
 			// 登录态只看 token(见 utils/auth.js):
 			// isLogin 这个缓存标记与真实登录态可能不同步(静默重登/401清理路径), 曾导致
 			// "明明已登录, 进预约页仍被拦请先登录, 退掉再登一次才好"。
