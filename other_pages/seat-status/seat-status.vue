@@ -36,10 +36,8 @@
 	import { getCurrentSeats, seatQueryTime } from '@/utils/current-seats.js'
 	import { SEAT_MAP_IMAGE, createSeatPositions } from '@/config/seat-layout.js'
 	import { isLoggedIn } from '@/utils/auth.js'
-	import BookLoading from '@/components/book-loading/book-loading.vue'
 
 	export default {
-		components: { BookLoading },
 		data() {
 			return { roomId: null, snapshot: null, loading: false, state: 'loading', mapImage: SEAT_MAP_IMAGE }
 		},

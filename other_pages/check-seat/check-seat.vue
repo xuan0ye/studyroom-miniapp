@@ -94,10 +94,7 @@
 import { SEAT_MAP_IMAGE, createSeatPositions } from '@/config/seat-layout.js'
 import { isLoggedIn } from '@/utils/auth.js'
 import { goBack as safeGoBack } from '@/utils/nav.js'
-import SeatOccupant from './components/seat-occupant.vue'
-	import BookLoading from '@/components/book-loading/book-loading.vue'
 	export default {
-		components: { SeatOccupant, BookLoading },
 		data() {
 			return {
 				// 页面参数(经 onLoad(options) 注入, uni-app 页面跳转参数不走 props)

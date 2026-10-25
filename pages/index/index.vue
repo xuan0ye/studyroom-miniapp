@@ -170,10 +170,8 @@
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	import { isLoggedIn } from '@/utils/auth.js'
 import { runUserGuide } from '@/utils/user-guide.js'
-	import BookLoading from '@/components/book-loading/book-loading.vue'
 	import { hasPromoPrice, formatPromoPrice, formatPromoUnit } from '@/utils/promo-display.js'
 	export default {
-		components: { BookLoading },
 		data() {
 			return {
 				swiperList: [],
