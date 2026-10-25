@@ -1,5 +1,6 @@
 <template>
 	<view class="current-seats-page">
+		<book-loading :loading="loading && !snapshot" fullscreen :delay="0" :min-duration="400" text="正在整理当前座位…"></book-loading>
 		<my-navbar leftText=" " title="当前座位情况" leftIcon="arrow-left" :custom="false" :autoBack="true" bgColor="#ffffff" leftIconSize="40"></my-navbar>
 		<view class="current-seats-content">
 			<view class="current-seats-heading">
@@ -10,9 +11,8 @@
 				</view>
 				<button class="current-seats-refresh" size="mini" :loading="loading" :disabled="loading" @click="refresh">刷新</button>
 			</view>
-			<view class="current-seats-state" v-if="!snapshot">
-				<book-loading v-if="loading" :loading="loading" text="正在整理当前座位…"></book-loading>
-				<template v-else><text>{{ stateText }}</text><button v-if="state === 'guest'" size="mini" @click="toLogin">去登录</button></template>
+			<view class="current-seats-state" v-if="!snapshot && !loading">
+				<text>{{ stateText }}</text><button v-if="state === 'guest'" size="mini" @click="toLogin">去登录</button>
 			</view>
 			<template v-if="snapshot">
 				<view class="current-seats-meta"><text>已预约 {{ snapshot.occupied }} / 共 {{ snapshot.total }} 席</text><text>{{ updatedLabel }} 更新</text></view>

@@ -1,5 +1,6 @@
 <template>
-	<view v-if="visible" class="book-loading" role="status" :aria-label="text">
+	<view v-if="visible" class="book-loading" :class="{ 'book-loading--fullscreen': fullscreen }" role="status" :aria-label="text" @touchmove.stop.prevent="blockTouch" @tap.stop="blockTouch">
+		<text v-if="fullscreen" class="book-loading__brand">答岸</text>
 		<view class="book-loading__book" aria-hidden="true">
 			<view class="book-loading__shadow"></view>
 			<view class="book-loading__cover book-loading__cover--left"></view>
@@ -12,6 +13,7 @@
 			<view class="book-loading__spine"></view>
 		</view>
 		<text class="book-loading__text">{{ text }}</text>
+		<text v-if="fullscreen" class="book-loading__footer">让专注，慢慢发生</text>
 	</view>
 </template>
 
@@ -21,7 +23,9 @@
 		props: {
 			loading: { type: Boolean, default: false },
 			text: { type: String, default: '正在翻开好时光…' },
-			delay: { type: Number, default: 220 }
+			delay: { type: Number, default: 220 },
+			fullscreen: { type: Boolean, default: false },
+			minDuration: { type: Number, default: 0 }
 		},
 		data() { return { visible: false } },
 		watch: {
@@ -32,19 +36,32 @@
 		onPageHide() { this._pageHidden = true; this.stopDelay(); this.visible = false },
 		beforeDestroy() { this._pageHidden = true; this.stopDelay() },
 		methods: {
+			blockTouch() {},
 			stopDelay() {
 				if (this._delayTimer) clearTimeout(this._delayTimer)
+				if (this._closeTimer) clearTimeout(this._closeTimer)
 				this._delayTimer = null
+				this._closeTimer = null
+			},
+			show() {
+				if (!this.visible) this._shownAt = Date.now()
+				this.visible = true
 			},
 			syncVisibility() {
 				this.stopDelay()
-				if (!this.loading || this._pageHidden) { this.visible = false; return }
+				if (this._pageHidden) { this.visible = false; return }
+				if (!this.loading) {
+					const remaining = Math.max(0, this.minDuration - (Date.now() - (this._shownAt || 0)))
+					if (this.visible && remaining) this._closeTimer = setTimeout(() => { this.visible = false; this._closeTimer = null }, remaining)
+					else this.visible = false
+					return
+				}
 				if (this.visible) return
 				const delay = Math.max(0, Number(this.delay) || 0)
-				if (!delay) { this.visible = true; return }
+				if (!delay) { this.show(); return }
 				this._delayTimer = setTimeout(() => {
 					this._delayTimer = null
-					if (this.loading && !this._pageHidden) this.visible = true
+					if (this.loading && !this._pageHidden) this.show()
 				}, delay)
 			}
 		}
@@ -53,6 +70,11 @@
 
 <style scoped>
 	.book-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64rpx 0; }
+	.book-loading--fullscreen { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30000; box-sizing: border-box; padding: 0 40rpx 80rpx; background: #f7fbff; background: radial-gradient(ellipse at 50% 42%, #eaf6ff 0%, #f7fbff 64%); }
+	.book-loading__brand { margin-bottom: 76rpx; color: #28547a; font-size: 48rpx; line-height: 70rpx; font-weight: 600; letter-spacing: 12rpx; }
+	.book-loading--fullscreen .book-loading__book { transform: scale(1.25) rotate(-5deg); }
+	.book-loading--fullscreen .book-loading__text { margin-top: 76rpx; }
+	.book-loading__footer { position: absolute; right: 40rpx; bottom: calc(56rpx + env(safe-area-inset-bottom)); left: 40rpx; color: #94a9bb; font-size: 24rpx; line-height: 36rpx; letter-spacing: 4rpx; text-align: center; }
 	.book-loading__book { position: relative; width: 216rpx; height: 144rpx; perspective: 920rpx; transform: rotate(-5deg); }
 	.book-loading__shadow { position: absolute; width: 200rpx; height: 20rpx; left: 8rpx; bottom: -24rpx; border-radius: 50%; background: rgba(25,69,104,.1); filter: blur(10rpx); }
 	.book-loading__cover { position: absolute; top: 14rpx; width: 108rpx; height: 132rpx; background: #39a5e9; }

@@ -1,6 +1,7 @@
 <template>
-	<page-meta :page-style="'overflow:'+(show?'hidden':'visible')">
+	<page-meta :page-style="'overflow:'+((show || (seatLoading && !seatLoaded))?'hidden':'visible')">
 		<view>
+			<book-loading :loading="seatLoading && !seatLoaded" fullscreen :delay="0" :min-duration="400" text="正在加载座位图…"></book-loading>
 			<my-navbar leftText="预定位置" leftIcon="arrow-left" :custom="false" bgColor="#ffffff" :autoBack="true"
 				leftIconSize="40">
 			</my-navbar>
@@ -16,8 +17,7 @@
 				</view>
 				<!-- 新版 3D 平面图与点击坐标随包发布，保留服务器旧坐标供旧版客户使用 -->
 				<!-- 坐标统一相对背景图本身: 背景图占满容器, 座位百分比定位 -->
-				<view v-if="seatLoading" class="seat-loading"><book-loading :loading="seatLoading" text="正在加载座位图…"></book-loading></view>
-				<view v-else-if="seatLoadError" class="seat-load-error"><text>暂时无法获取座位情况</text><button size="mini" @click="retrySeats">重新加载</button></view>
+				<view v-if="seatLoadError" class="seat-load-error"><text>暂时无法获取座位情况</text><button size="mini" @click="retrySeats">重新加载</button></view>
 				<view v-else-if="seatLoaded && !hasSeats" class="seat-load-error">当前时段暂无可展示的座位</view>
 				<view v-else-if="seatLoaded" class="seatmap" id="seatmap">
 					<!-- 门店布局图背景(占满容器) -->
@@ -302,7 +302,6 @@ import { goBack as safeGoBack } from '@/utils/nav.js'
 </script>
 
 <style lang="scss">
-	.seat-loading { min-height: 420rpx; padding-top: 40rpx; }
 	.seat-load-error { padding: 100rpx 0; color: #738293; font-size: 26rpx; text-align: center; }
 	.seat-load-error button { display: block; margin-top: 28rpx; color: #2586c5; background: #edf7fe; }
 	.seat-head {

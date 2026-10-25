@@ -1,6 +1,7 @@
 <template>
-	<page-meta :page-style="'overflow:'+(show?'hidden':'visible')">
+	<page-meta :page-style="'overflow:'+((show || homeLoading)?'hidden':'visible')">
 		<view class="page-bg">
+			<book-loading :loading="homeLoading" fullscreen :delay="0" :min-duration="400" text="正在为你准备自习时光…"></book-loading>
 			<view>
 				<my-navbar leftText=" " :storeName="store.roomName || ''" :custom="true" :autoBack="false" :show="show"
 					@changeShow="changeShow">
@@ -97,11 +98,8 @@
 				<my-index-ER></my-index-ER>
 			</view>
 			<!-- 热门活动(内容由后台「门店管理→热门活动」维护, 无数据则整块不显示) -->
-			<view class="content-hot" v-if="promoList.length > 0 || promoLoading">
+			<view class="content-hot" v-if="promoList.length > 0">
 				<view class="promo-heading"><text class="promo-heading-title">热门活动</text><text class="promo-heading-note">答岸 · 自习时光</text></view>
-				<view v-if="promoLoading && !promoList.length" class="promo-loading">
-					<book-loading :loading="promoLoading"></book-loading>
-				</view>
 				<view v-for="item in promoList" :key="item.id" class="promo-card" role="button" :aria-label="'查看活动：' + item.title" @click="toPromo(item)">
 					<view class="promo-top">
 						<view class="promo-image">
@@ -187,6 +185,7 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				myCards: [],
 				promoList: [],
 				promoLoading: false,
+				homeLoading: true,
 				// 通知公告(后台「系统管理-通知公告」): 最新在前, 首页只显示第一条, 点开看全部
 				noticeList: [],
 				noticeShow: false
@@ -197,6 +196,25 @@ import { runUserGuide } from '@/utils/user-guide.js'
 		},
 		methods: {
 			...mapMutations(['setIndex']),
+			async loadHome() {
+				this.homeLoading = true
+				// 弱网/登录重试时也不让整屏一直停在加载画面。
+				this._homeLoadingTimer = setTimeout(() => { if (this._homeAlive) this.homeLoading = false }, 12000)
+				try {
+					await Promise.all([this.setSwiper(), this.loadPromo(), this.getStoreList()].map(request => request.catch(() => {})))
+				} finally {
+					clearTimeout(this._homeLoadingTimer)
+					this._homeLoadingTimer = null
+					if (this._homeAlive) this.homeLoading = false
+				}
+			},
+			cachedStore() {
+				try {
+					const raw = uni.getStorageSync('store')
+					const saved = typeof raw === 'string' ? JSON.parse(raw) : raw
+					return saved && saved.roomId ? saved : null
+				} catch (error) { return null }
+			},
 			/**
 			 * 首页通知公告(后台「系统管理-通知公告」维护的)。
 			 *
@@ -224,7 +242,7 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				if (this.promoLoading) return
 				this.promoLoading = true
 				try {
-					const res = await getPromoList({}, { custom: { catch: true, toast: false } })
+					const res = await getPromoList({}, { timeout: 10000, custom: { catch: true, toast: false } })
 					const list = (res && res.data) ? res.data : []
 					// 配图地址有两种形态(与轮播图同一套约定, 见 setSwiper):
 					//   1) /upload/...  —— 后台上传接口返回的本地相对路径 → 拼当前环境域名;
@@ -286,6 +304,7 @@ import { runUserGuide } from '@/utils/user-guide.js'
 					const {
 						data: res
 					} = await getSwiper({}, {
+						timeout: 10000,
 						custom: {
 							auth: true,
 							catch: true
@@ -330,23 +349,20 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				}
 			},
 			async getStoreList() {
-				const {
-					data: res
-				} = await getStore()
-				console.log(res)
-				const store = uni.getStorageSync('store')
-				console.log('store----', store)
-				if (store == null || store == '') {
-					const val = res.rows[0]
+				const { data: res } = await getStore({}, { timeout: 10000, custom: { catch: true, toast: false } })
+				const rows = res && Array.isArray(res.rows) ? res.rows : []
+				const store = this.cachedStore()
+				if (!store && rows.length) {
+					const val = rows[0]
 					this.$store.commit('setStore', val)
 					console.log('this.store', this.store)
 					uni.setStorageSync('store', JSON.stringify(val))
 					this.$store.dispatch('setStore', val)
-				} else {
-					this.$store.dispatch('setStore', JSON.parse(store))
+				} else if (store) {
+					this.$store.dispatch('setStore', store)
 				}
-				this.$store.commit('setStoreList', res.rows)
-				this.storeList = res.rows
+				this.$store.commit('setStoreList', rows)
+				this.storeList = rows
 			},
 			/**
 			 * 清空"只有登录用户才有"的页面数据(退出登录 / 登录态失效时调用)。
@@ -562,16 +578,12 @@ import { runUserGuide } from '@/utils/user-guide.js'
 
 		},
 		onLoad() {
-			this.setSwiper()
-			this.loadPromo()
-			this.getStoreList()
-			const store = uni.getStorageSync('store')
-			if (store != null && store != '') {
-				console.log('onLoad store---', store)
-				this.$store.dispatch('setStore', JSON.parse(store))
-			}
-
+			this._homeAlive = true
+			const store = this.cachedStore()
+			if (store) this.$store.dispatch('setStore', store)
+			this.loadHome()
 		},
+		onUnload() { this._homeAlive = false; clearTimeout(this._homeLoadingTimer) },
 		onShow() {
 			this.setIndex(0)
 			// 公告: 无需登录, 每次进首页都拉一次(闭店/临时调整这类通知要新鲜)
@@ -595,11 +607,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 				// 否则会继续显示"我的周期卡""今日预约"等上一个账号的内容(实测就是这样)。
 				this.clearUserState()
 			}
-			const store = uni.getStorageSync('store')
-			if (store != null && store != '') {
-				console.log('onShow store---', store)
-				this.$store.dispatch('setStore', JSON.parse(store))
-			}
+			const store = this.cachedStore()
+			if (store) this.$store.dispatch('setStore', store)
 		}
 	}
 </script>
@@ -615,7 +624,6 @@ import { runUserGuide } from '@/utils/user-guide.js'
 	.content-hot .promo-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36rpx; }
 	.content-hot .promo-heading-title { color: #26394c; font-size: 36rpx; font-weight: 600; }
 	.content-hot .promo-heading-note { margin-left: 24rpx; color: #7d8c9c; font-size: 22rpx; }
-	.content-hot .promo-loading { min-height: 330rpx; }
 	.content-hot .promo-card { box-sizing: border-box; padding: 32rpx; margin-bottom: 32rpx; background: #ffffff; color: #26394c; border-radius: 34rpx; box-shadow: 0 8rpx 36rpx rgba(37,69,95,.035); }
 	.content-hot .promo-top { display: flex; align-items: center; }
 	.content-hot .promo-image { display: flex; align-items: center; justify-content: center; width: 176rpx; height: 200rpx; flex-shrink: 0; overflow: hidden; border-radius: 22rpx; background: #f0f6fa; }

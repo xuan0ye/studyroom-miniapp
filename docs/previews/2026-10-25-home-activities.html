@@ -18,7 +18,7 @@
     .preview-controls{display:flex;gap:8px;flex-wrap:wrap;margin:0 8px 22px}
     .preview-control{border:1px solid #d9e2eb;background:#fff;color:#3c5972;border-radius:18px;padding:8px 14px;min-height:40px;font-size:12px}
     .preview-control-primary{background:#e4f2fd;color:#217bb6;border-color:#c9e4f8}
-    .phone{width:375px;max-width:100%;margin:auto;background:var(--bg);border-radius:24px;box-shadow:0 12px 42px #273b5110;padding:26px 20px 24px;min-height:480px}
+    .phone{position:relative;width:375px;max-width:100%;margin:auto;background:var(--bg);border-radius:24px;box-shadow:0 12px 42px #273b5110;padding:26px 20px 24px;min-height:700px;overflow:hidden}
     .section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
     .section-heading h2{font-size:18px;font-weight:650;margin:0}
     .section-heading span{font-size:11px;color:#7d8c9c}
@@ -40,7 +40,11 @@
     .old-price{margin-left:9px;font-size:11px;color:#97a2ae}
     .promo-action{display:flex;align-items:center;gap:8px;color:var(--blue);font-size:12px;min-height:30px;white-space:nowrap}
     .chevron{width:6px;height:6px;border-right:1.5px solid currentColor;border-top:1.5px solid currentColor;transform:rotate(45deg)}
-    .book-wait{height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+    .book-wait{position:absolute;inset:0;z-index:20;background:radial-gradient(ellipse at 50% 42%,#eaf6ff 0%,#f7fbff 64%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:40px}
+    .book-brand{font-size:24px;line-height:35px;letter-spacing:6px;font-weight:600;color:#28547a;margin-bottom:38px}
+    .book-wait .book{transform:scale(1.25) rotate(-5deg)}
+    .book-wait .loading-copy{margin-top:38px}
+    .book-footer{position:absolute;left:20px;right:20px;bottom:28px;text-align:center;font-size:12px;line-height:18px;letter-spacing:2px;color:#94a9bb}
     .book{width:108px;height:72px;position:relative;perspective:460px;transform:rotate(-5deg);--speed:1.65s}
     .book-shadow{position:absolute;width:100px;height:10px;left:4px;bottom:-12px;border-radius:50%;background:#1945681c;filter:blur(5px)}
     .cover{position:absolute;top:7px;width:54px;height:66px;background:#39a5e9}
@@ -69,7 +73,7 @@
 </head>
 <body>
   <main class="preview">
-    <header class="preview-header"><h1>首页局部预览</h1><span class="preview-version">v2026.10.25.1</span></header>
+    <header class="preview-header"><h1>全屏加载与热门活动预览</h1><span class="preview-version">全屏加载版</span></header>
     <div class="preview-controls" aria-label="预览加载状态">
       <button class="preview-control preview-control-primary" type="button" id="slow-load">看翻书加载</button>
       <button class="preview-control" type="button" id="fast-load">模拟快速加载</button>
@@ -77,9 +81,11 @@
     </div>
     <section class="phone" aria-label="首页热门活动">
       <header class="section-heading"><h2>热门活动</h2><span>答岸 · 自习时光</span></header>
-      <div class="book-wait" id="book-wait" hidden role="status" aria-label="正在加载活动">
+      <div class="book-wait" id="book-wait" hidden role="status" aria-label="正在为你准备自习时光">
+        <div class="book-brand">答岸</div>
         <div class="book" aria-hidden="true"><div class="book-shadow"></div><div class="cover cover-left"></div><div class="cover cover-right"></div><div class="paper paper-left"></div><div class="paper paper-right"></div><div class="leaf leaf-a"></div><div class="leaf leaf-b"></div><div class="leaf leaf-c"></div><div class="spine"></div></div>
-        <div class="loading-copy">正在翻开好时光…</div>
+        <div class="loading-copy">正在为你准备自习时光…</div>
+        <div class="book-footer">让专注，慢慢发生</div>
       </div>
       <div class="promo-list" id="promo-list">
         <button class="promo" type="button" data-promo="visit">
@@ -99,7 +105,7 @@
       </div>
     </section>
     <div class="preview-status" id="preview-status" role="status" aria-live="polite"></div>
-    <p class="preview-note">使用当前两条活动的文案、价格与原配图<br>仅预览本模块；此处不执行购买或修改线上内容</p>
+    <p class="preview-note">加载时覆盖整个手机页面，准备好后显示内容<br>此处为交互演示，不执行购买或修改线上内容</p>
   </main>
   <div class="modal" id="detail-modal" hidden>
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-description">
@@ -113,19 +119,18 @@
       const status = document.getElementById('preview-status');
       const modal = document.getElementById('detail-modal');
       const closeButton = document.getElementById('dialog-close');
-      let revealTimer;
       let finishTimer;
       let opener;
       function finish() {
-        clearTimeout(revealTimer); clearTimeout(finishTimer);
+        clearTimeout(finishTimer);
         loader.hidden = true; list.hidden = false;
         list.setAttribute('aria-busy','false');
       }
       function load(duration) {
         finish(); status.textContent = '';
         list.setAttribute('aria-busy','true');
-        revealTimer = setTimeout(() => { loader.hidden = false; list.hidden = true; status.textContent = '正在加载活动'; },220);
-        finishTimer = setTimeout(() => { finish(); status.textContent = duration < 220 ? '加载完成，直接展示内容' : '加载完成'; },duration);
+        loader.hidden = false; list.hidden = true; status.textContent = '正在准备首页';
+        finishTimer = setTimeout(() => { finish(); status.textContent = duration < 400 ? '加载完成，保留短暂过渡后显示内容' : '加载完成'; },Math.max(400,duration));
       }
       document.getElementById('slow-load').addEventListener('click',() => load(2800));
       document.getElementById('fast-load').addEventListener('click',() => load(80));
@@ -149,6 +154,7 @@
         if(event.key==='Escape')close();
         if(event.key==='Tab'){event.preventDefault();closeButton.focus();}
       });
+      load(2800);
     })();
   </script>
 </body>
