@@ -16,6 +16,14 @@ export function cardDate(v) {
 	return isNaN(d.getTime()) ? null : d
 }
 
+export function isTimedCard(c) {
+	return Number(c && c.card && c.card.bookingHours) > 0
+}
+
+export function isTrialCard(c) {
+	return String(c && (c.cardId || (c.card && c.card.id))) === '2180000000000000501'
+}
+
 // 固定区间卡的使用区间: { start, end }; end 为截止日次日 00:00(即截止日当天仍可用)。非固定区间卡返回 null
 export function cardWindow(c) {
 	var card = c && c.card
@@ -57,6 +65,7 @@ export function isCycleCard(c) {
 // 该卡当前是否可用(可用于预约)
 export function isCardUsable(c) {
 	if (!c || !c.card) return false
+	if (isTimedCard(c)) return !c.consumed
 	var now = new Date()
 	var win = cardWindow(c)
 	if (win) {
@@ -90,6 +99,10 @@ export function isCardUsable(c) {
 // 卡是否已用完/已过期(与 isCardUsable 互补, 用于卡面"已过期"状态)
 export function isCardExpired(c) {
 	if (!c || !c.card) return false
+	if (isTimedCard(c)) {
+		var end = cardDate(c.expiryTime)
+		return !!c.consumed && !!end && end <= new Date()
+	}
 	var now = new Date()
 	var win = cardWindow(c)
 	if (win) return now >= win.end
@@ -109,6 +122,7 @@ export function isCardExpired(c) {
 // 是否应在卡包里展示(固定区间卡在开始日前也展示, 提示"xx起可用")
 export function isCardVisible(c) {
 	if (isCardUsable(c)) return true
+	if (isTimedCard(c)) return !isCardExpired(c)
 	var win = cardWindow(c)
 	if (!win || !win.start) return false
 	return new Date() < win.start

@@ -132,12 +132,12 @@
 							uni.setStorageSync('phone', phoneData.data.phoneNumber)
 							that.loading = false
 							uni.$u.toast('登录成功')
-							// 新人引导: 新用户弹「联系客服领体验卡 + 先录人脸再到店」, 老用户检查人脸提醒
-							runUserGuide()
+							// 绑定成功后查询赠卡结果，提示选座、录脸、开灯起算。
 
 							// 回到上一页或首页(统一走 utils/nav.js 的安全返回, 栈只有 1 层时兜底)
 							setTimeout(() => {
 								safeGoBack()
+								setTimeout(() => runUserGuide(), 300)
 							}, 500)
 						}).catch((err) => {
 							that.loading = false

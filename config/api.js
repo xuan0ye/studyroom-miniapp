@@ -318,6 +318,8 @@ export const accessFaceUpload = (params, config = {}) => http.post('/api/wx/acce
  */
 export const accessProfile = (params, config = {}) => http.get('/api/wx/access/profile/current', { params, ...config })
 
+export const newUserTrialStatus = (params, config = {}) => http.get('/api/wx/trial/status', { params, ...config })
+
 /**
  * 远程开门(仅当日有效预约用户)
  * @param {*} params { roomId }

@@ -7,13 +7,13 @@
 				<view class="record-item" v-for="item in list" :key="item.id">
 					<view class="record-head">
 						<u-text :bold="true" size="30" :text="item.roomName || '自习室'" />
-						<u-tag :text="statusLabel(item.status)" :type="statusType(item.status)" size="mini" />
+						<u-tag :text="statusLabel(item)" :type="statusType(item.status)" size="mini" />
 					</view>
 					<view class="record-row">
 						<u-text size="26" color="#666" :text="'座位：' + (item.seatNum ? item.seatNum + ' 号' : '未选座位')" />
 					</view>
 					<view class="record-row">
-						<u-text size="26" color="#666" :text="'日期：' + (item.consumptionDate || '')" />
+						<u-text size="26" color="#666" :text="item.startOnLight && !item.checkInTime ? '尚未计时 · 开灯成功起连续体验2小时' : (item.bookingStartTime ? ('时段：' + item.bookingStartTime + ' 至 ' + item.bookingEndTime) : ('日期：' + (item.consumptionDate || '')))" />
 					</view>
 					<view class="record-row" v-if="item.cardTitle">
 						<u-text size="26" color="#999" :text="'使用卡：' + item.cardTitle" />
@@ -59,16 +59,24 @@
 	import { myBookings, seatPowerOn, seatPowerOff, cancelBooking } from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { cardDate } from '@/utils/card-usable.js'
+	import { timedBookingActive } from '@/utils/timed-booking.js'
 	export default {
 		data() {
 			return {
 				list: [],
 				lightLoading: '',
-				cancelLoading: ''
+				cancelLoading: '',
+				nowTick: Date.now()
 			}
 		},
 		methods: {
-			statusLabel(status) {
+			statusLabel(item) {
+				const status = item.status
+				if (item.bookingEndTime && status !== 2) {
+					if (cardDate(item.bookingEndTime) <= new Date(this.nowTick)) return '已结束'
+					if (item.startOnLight && !item.checkInTime) return '待开灯体验'
+					return timedBookingActive(item, new Date(this.nowTick)) ? '使用时段内' : '待开始'
+				}
 				if (status === 1) return '已使用'
 				if (status === 2) return '已失效'
 				return '待使用'
@@ -82,8 +90,9 @@
 				uni.switchTab({ url: '/pages/order/order' })
 			},
 				isTodayActive(item) {
+					if (item && item.bookingStartTime) return timedBookingActive(item, new Date(this.nowTick))
 					// 状态为待使用(0) 且预约日期是今天
-					if (!item || item.status !== 0 || !item.consumptionDate || !item.seatId) return false
+					if (!item || (item.status !== 0 && item.status !== 1) || !item.consumptionDate || !item.seatId) return false
 					var d = new Date()
 					var pad = function(n) { return n < 10 ? '0' + n : '' + n }
 					var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
@@ -93,6 +102,8 @@
 				// 注意: iOS 不支持 new Date('2026-10-03 20:57:47'), 必须统一走 cardDate 解析
 				canCancel(item) {
 					if (!item || item.status !== 0) return false
+					if (item.startOnLight && !item.checkInTime) return new Date(this.nowTick) < cardDate(item.bookingEndTime)
+					if (item.bookingStartTime) return new Date(this.nowTick) < cardDate(item.bookingStartTime)
 					if (!item.consumptionDate) return true
 					var d = cardDate(item.consumptionDate)
 					if (!d) return true
@@ -100,6 +111,7 @@
 					return new Date() < dayEnd
 				},
 				cancelDisabledText(item) {
+					if (item && item.bookingStartTime) return '预约已开始，连续计时，不可暂停或取消'
 					if (!item || !item.consumptionDate) return '该预约已不可取消'
 					var d = cardDate(item.consumptionDate)
 					if (d && new Date() >= new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
@@ -111,7 +123,7 @@
 				// 取消仅作废当日预约; 平台不做在线退款, 需要退款请联系客服办理
 				uni.showModal({
 					title: '取消预约',
-					content: '取消后该天预约作废、座位释放。月卡/季卡等长期卡会同时停卡并冻结剩余天数（可在「我的 → 卡包」里再选日期续用）。卡费如需退还，请联系门店客服办理。确定取消？',
+					content: item.bookingStartTime ? '取消后释放本次时段，卡券恢复，可重新预约。此操作不会退款。确定取消？' : '取消后该天预约作废、座位释放。月卡/季卡等长期卡会同时停卡并冻结剩余天数（可在「我的 → 卡包」里再选日期续用）。卡费如需退还，请联系门店客服办理。确定取消？',
 					confirmText: '确定取消',
 					confirmColor: '#e64340',
 					success: async (res) => {
@@ -135,6 +147,7 @@
 					const res = await seatPowerOn({ seatId: item.seatId }, { custom: { auth: true, catch: true } })
 					const r = judgeDeviceResult(res, '座位灯已开启')
 					uni.$u.toast(r.msg)
+					if (r.ok) this.loadRecords()
 				} catch (e) {
 					uni.$u.toast((e && e.msg) || '开灯失败，请稍后再试')
 				} finally {
@@ -154,6 +167,7 @@
 				}
 			},
 			async loadRecords() {
+				this.nowTick = Date.now()
 				try {
 					const { data: list } = await myBookings({}, { custom: { auth: true, catch: true } })
 					this.list = list || []
@@ -164,7 +178,11 @@
 		},
 		onShow() {
 			this.loadRecords()
-		}
+			clearInterval(this._bookingClock)
+			this._bookingClock = setInterval(() => { this.nowTick = Date.now() }, 15000)
+		},
+		onHide() { clearInterval(this._bookingClock) },
+		onUnload() { clearInterval(this._bookingClock) }
 	}
 </script>
 

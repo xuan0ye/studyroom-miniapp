@@ -40,6 +40,9 @@
 					<view style="margin-top: 4rpx;" v-if="todayBooking.checkInTime">
 						<u-text size="24" color="#4facfe" :text="'已签到：' + fmtTime(todayBooking.checkInTime)" />
 					</view>
+					<view v-if="todayBooking.bookingEndTime" style="margin-top: 6rpx;">
+						<u-text size="24" color="#b96a39" :text="todayBooking.startOnLight && !todayBooking.checkInTime ? '尚未计时 · 开灯成功起连续体验2小时' : ('本次使用至 ' + todayBooking.bookingEndTime)" />
+					</view>
 				</view>
 				<view class="today-light-right">
 					<u-button size="small" type="primary" color="#35a5ed" shape="circle"
@@ -166,6 +169,7 @@
 	} from '@/config/api.js'
 	import { judgeDeviceResult } from '@/utils/device-result.js'
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
+	import { timedBookingActive } from '@/utils/timed-booking.js'
 	import { isLoggedIn } from '@/utils/auth.js'
 import { runUserGuide } from '@/utils/user-guide.js'
 	import { hasPromoPrice, formatPromoPrice, formatPromoUnit } from '@/utils/promo-display.js'
@@ -447,7 +451,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 						var found = null
 						for (var i = 0; i < arr.length; i++) {
 							var it = arr[i]
-							if (it.status === 0 && it.seatId && String(it.consumptionDate || '').indexOf(today) === 0) {
+							if (it.seatId && (it.bookingStartTime ? timedBookingActive(it) :
+								(it.status === 0 && String(it.consumptionDate || '').indexOf(today) === 0))) {
 								found = it
 								break
 							}

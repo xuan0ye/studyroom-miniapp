@@ -1,0 +1,9 @@
+# 新人两小时体验卡
+
+2026-10-30：新用户绑定微信验证的手机号后自动领一张，每手机号一次。功能需配套后端和数据库迁移，上线前不能仅发布前端。
+
+卡包和领取成功弹窗进入 `/other_pages/timed-booking/timed-booking?trial=1`。体验预约不选择计费开始时间，不自动开灯；先预留座位、录门禁人脸，再在首页或「我的预约」开灯，成功后连续计时 120 分钟。重复开关灯不暂停、不重置；到期关灯并取消体验权限由后端执行。
+
+尚未开灯的预约两小时后自动释放并恢复体验卡，之前也可手动取消。迟到后座位后续两小时与其它预约冲突时需换座。该规则在预约页明确展示。
+
+验证：`node tests/new-user-trial.test.cjs`、`node tests/timed-booking.test.cjs`，以及 `_check_vue.js` 的五个修改组件、`_check_pages.js` 均通过。后端说明见同级后端项目 `docs/new-user-trial.md`，迁移为 `script/sql/new_user_trial_migration.sql`。尚未执行生产迁移、部署或小程序上传发布，仍需现场灯控与门禁验收。

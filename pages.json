@@ -32,6 +32,10 @@
 			"root": "other_pages",
 			"pages": [
 				{
+					"path": "timed-booking/timed-booking",
+					"style": { "navigationBarTitleText": "下班充电卡", "enablePullDownRefresh": false }
+				},
+				{
 					"path": "rank/rank",
 					"style": {
 						"navigationBarTitleText": "",

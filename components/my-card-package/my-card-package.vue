@@ -59,7 +59,7 @@
 						<view style="margin-top: 20rpx; text-align: center;">
 							<!-- 停卡后剩余天数还在 => 仍可继续预约续用, 不能显示成"已使用"把入口堵死 -->
 							<u-button v-if="!expired" color="#35a5ed" size="medium"
-								:text="consumed ? '继续预约（续用剩余天数）' : '去预约'" @click="goBook" />
+								:text="isTimed && consumed ? '查看预约时段' : (consumed ? '继续预约（续用剩余天数）' : '去预约')" @click="goBook" />
 							<u-button v-else type="info" size="medium" plain text="已用完" disabled />
 							<!-- 锁座状态: 周期卡与长期卡都要能看到锁到什么时候。
 							     原条件 `!consumed` 有误 —— 预约会写入消费记录使 consumed=true,
@@ -90,7 +90,7 @@
 </template>
 
 <script>
-	import { cardWindowText, cardWindow, cardRemainDays, cardLeaveInfo, isLongTermCard, isCycleCard, isCardExpired } from '@/utils/card-usable.js'
+	import { cardWindowText, cardWindow, cardRemainDays, cardLeaveInfo, isLongTermCard, isCycleCard, isCardExpired, isTimedCard, isTrialCard } from '@/utils/card-usable.js'
 	import { cardLeave, cardUnlock } from '@/config/api.js'
 	export default {
 		name: "my-card-package",
@@ -139,6 +139,7 @@
 			}
 		},
 		computed: {
+			isTimed() { return isTimedCard(this.current) },
 			// 当前 swiper 对应的卡(组件没有 onLoad 生命周期, 必须走 computed 才能拿到卡面信息)
 			current() {
 				return (this.list && this.list.length) ? (this.list[this.currentIndex] || this.list[0]) : {}
@@ -156,6 +157,7 @@
 			},
 			// 卡面天数: 优先剩余天数(停卡冻结后更准确)
 			cardDaysText() {
+				if (this.isTimed) return this.currentCard.bookingHours + '小时 / 次'
 				var d = cardRemainDays(this.current)
 				if (d > 0) return d + '天'
 				return ((this.currentCard.frequency != null ? this.currentCard.frequency : 0)) + '天'
@@ -170,6 +172,8 @@
 			},
 			// 剩余可用天数文案
 			remainText() {
+				if (isTrialCard(this.current)) return this.consumed ? '已预约；首次成功开灯后连续计时2小时' : '新人赠送 · 首次成功开灯起连续2小时'
+				if (this.isTimed) return this.consumed ? '已预约，具体起止时间请查看预约记录' : ((this.currentCard.entryStartHour || 0) + ':00后开始，连续' + this.currentCard.bookingHours + '小时，可跨零点')
 				var d = cardRemainDays(this.current)
 				if (this.current && this.current.consumed) return '剩余可用 ' + d + ' 天'
 				return '共 ' + d + ' 天可用（首次预约后开始计算）'
@@ -200,6 +204,7 @@
 			},
 			// 卡状态标签: 使用中 > 已用完 > 已停卡 > 待使用(买来还没用过) > 可用
 			statusLabel() {
+				if (this.isTimed) return this.expired ? '已用完' : (this.consumed ? '已预约' : '待使用')
 				if (this.lockState.locked) return '使用中'
 				if (this.expired) return '已用完'
 				if (this.consumed) return '已停卡'
@@ -241,6 +246,8 @@
 			// 卡面底部文案: 固定区间卡 > 已停卡(剩余天数) > 有效期至 > 待使用
 			cardBottomText(item) {
 				if (!item) return ''
+				if (isTrialCard(item)) return '单人单次 · 开灯起2小时 · 到期关灯并取消体验权限'
+				if (isTimedCard(item)) return item.consumed ? ('预约结束于 ' + item.expiryTime) : ('单人单次 · 连续' + item.card.bookingHours + '小时 · 不可拆分')
 				var w = this.windowText(item)
 				if (w) return w
 				// 长期卡请假/停卡后 expiryTime 已过期但天数还在, 别再显示"有效期至 <过去日期>"
@@ -284,6 +291,11 @@
 				console.log(index)
 			},
 			goBook() {
+				if (this.isTimed) {
+					uni.navigateTo({ url: this.consumed ? '/other_pages_mine/my_bookings/my_bookings' :
+						'/other_pages/timed-booking/timed-booking?cardUserId=' + this.current.id + (isTrialCard(this.current) ? '&trial=1' : '') })
+					return
+				}
 				uni.switchTab({
 					url: '/pages/order/order'
 				})

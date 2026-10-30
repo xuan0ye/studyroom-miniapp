@@ -3,7 +3,7 @@
  *
  * 为什么单独放一个文件:
  * 1) 新用户登录后要知道两件事:
- *    ① 新人体验卡 —— 不再自动发卡, 由客服手动发放, 需要引导用户加客服微信
+ *    ① 新人体验卡 —— 新用户绑定手机号后自动领取，每个手机号限一张，开灯起两小时
  *    ② 刷脸进门 —— 先录人脸再到店, 否则门口闸机刷不开("进不去门"是顾客最难受的故障)
  * 2) "没录人脸"不能只提示一次: 未录入期间每天提醒一次, 录上后自动不再提醒。
  * 3) 新用户标记由后端登录接口返回(login 响应 newUser=true),
@@ -11,10 +11,11 @@
  *    那条路径拿不到响应, 所以它在本地挂一个 pendingNewUserGuide 标记, 由本文件消费。
  */
 
-import { accessProfile } from '@/config/api.js'
+import { accessProfile, newUserTrialStatus } from '@/config/api.js'
 
 const FACE_PAGE = '/other_pages/access/face-enroll'
-const FEEDBACK_PAGE = '/other_pages/feedback/feedback'
+const TRIAL_PAGE = '/other_pages/timed-booking/timed-booking?trial=1'
+let guideRunning = false
 
 // 与 config/request.js 里的字面量保持一致(那边不 import 本文件, 避免 api.js 循环依赖)
 const KEY_PENDING_NEW_USER = 'pendingNewUserGuide'
@@ -46,16 +47,14 @@ export function showNewUserGuide() {
 	uni.setStorageSync(KEY_NEW_USER_DONE, 1)
 	uni.showModal({
 		title: '欢迎新同学 🎉',
-		content: '① 新人体验卡：加客服微信免费领一张\n'
-			+ '② 刷脸进门：请先录人脸再到店，门口刷脸进\n\n'
-			+ '建议顺序：先录人脸 → 到店直接刷脸进。',
-		confirmText: '去录人脸',
-		cancelText: '看客服微信',
+		content: '① 新用户绑定手机号后自动领两小时体验卡，每个手机号限一次。\n'
+			+ '② 先预约座位，再录入门禁人脸，到座位后开灯。\n\n'
+			+ '首次开灯成功起连续计时两小时，到期自动关灯并取消体验权限。',
+		confirmText: '查看体验卡',
+		cancelText: '稍后再说',
 		success(res) {
 			if (res.confirm) {
-				go(FACE_PAGE)
-			} else if (res.cancel) {
-				go(FEEDBACK_PAGE)
+				go(TRIAL_PAGE)
 			}
 		}
 	})
@@ -96,7 +95,27 @@ export function checkFaceEnrollTip() {
  * 统一入口: 登录流程结束、以及首页/我的页 onShow 都可以调。
  * 有挂起的"新用户引导"就弹新人必读, 否则检查人脸提醒。
  */
-export function runUserGuide() {
+export async function runUserGuide() {
+	if (!uni.getStorageSync('token') || guideRunning) return
+	guideRunning = true
+	try {
+		const res = await newUserTrialStatus({}, { custom: { auth: true, catch: true, toast: false } })
+		const trial = res && res.data
+		const noticeKey = trial && trial.cardUserId ? 'trialGiftNotice_' + trial.cardUserId : ''
+		if (trial && trial.received && noticeKey && !uni.getStorageSync(noticeKey)) {
+			uni.setStorageSync(noticeKey, 1)
+			uni.removeStorageSync(KEY_PENDING_NEW_USER)
+			uni.showModal({
+				title: '两小时体验卡已到账',
+				content: '已放入你的卡包。先预约座位，再录入门禁人脸，到座位后开灯。首次开灯成功起连续体验两小时，中途关灯不暂停，到期自动关灯并取消体验权限。',
+				confirmText: '去选座', cancelText: '稍后使用',
+				success(res) { if (res.confirm) go(TRIAL_PAGE) }
+			})
+			return
+		}
+	} catch (e) {
+		// Status is advisory; the binding transaction owns the grant and retries are safe.
+	} finally { guideRunning = false }
 	if (uni.getStorageSync(KEY_PENDING_NEW_USER)) {
 		uni.removeStorageSync(KEY_PENDING_NEW_USER)
 		showNewUserGuide()
