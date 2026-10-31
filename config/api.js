@@ -318,6 +318,12 @@ export const accessFaceUpload = (params, config = {}) => http.post('/api/wx/acce
  */
 export const accessProfile = (params, config = {}) => http.get('/api/wx/access/profile/current', { params, ...config })
 
+export const accessCameraCapabilities = (config = {}) => http.get('/api/wx/access/camera/capabilities', config)
+export const accessCameraStart = (params = {}, config = {}) => http.post('/api/wx/access/camera/start', params, config)
+export const accessCameraStatus = (sessionId, config = {}) => http.get('/api/wx/access/camera/status', { params: { sessionId }, ...config })
+export const accessCameraConfirm = (sessionId, config = {}) => http.post('/api/wx/access/camera/confirm', { sessionId }, config)
+export const accessCameraCancel = (sessionId, config = {}) => http.post('/api/wx/access/camera/cancel', { sessionId }, config)
+
 export const newUserTrialStatus = (params, config = {}) => http.get('/api/wx/trial/status', { params, ...config })
 
 /**

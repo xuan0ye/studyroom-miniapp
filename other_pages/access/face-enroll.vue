@@ -5,19 +5,28 @@
 		<view class="container">
 			<!-- 使用说明 -->
 			<view class="tip-card">
-				<u-text size="26" color="#666" text="录入人脸后，到店可刷脸进入自习室。人脸照片服务器不存储、仅门禁设备本地用于比对；门禁权限随预约结束自动失效。" />
+				<u-text size="26" color="#666" text="有当前有效预约或参观券，可拍照上传，也可站到门禁前使用设备摄像头录脸。请本人操作，通行时间以门店授权为准。" />
 			</view>
 
-			<!--
-				已移除「扫码录入人脸（官方通道）」二维码块。
-				原因是它会把用户引到厂商页面(access.yefiot.com)录脸: 那样人脸只进设备、不进我们的数据库,
-				于是门店门禁上会积累一批"系统不知道是谁、也无法撤销"的权限
-				(实测设备上 127 人里, 120 人属于这类)。
-				现在只保留本页的"拍照上传"一条路径 —— 录过的人我们才有记录, 预约结束才能自动撤销。
-			-->
+			<view class="enrollment-card">
+				<view class="enrollment-heading">
+					<u-icon :name="hasUploadedFace ? 'checkmark-circle-fill' : 'account'" :color="hasUploadedFace ? '#19be6b' : '#35a5ed'" size="42" />
+					<view class="enrollment-title">{{ profileLoading ? '正在读取人脸状态…' : (hasUploadedFace ? '已上传人脸' : '门禁人脸') }}</view>
+				</view>
+				<view class="enrollment-description">{{ hasUploadedFace ? '人脸已成功提交至门禁。如需更换照片，可重新录入。' : '如果已录过人脸并能正常刷脸进门，无需重复上传；需要新增或更换照片时，可在下方录入。' }}</view>
+				<view v-if="hasUploadedFace && !editingFace" class="edit-face" @click="beginFaceEdit">重新录入人脸</view>
+				<view v-if="hasUploadedFace && editingFace && !uploading" class="edit-face" @click="cancelFaceEdit">取消更换</view>
+			</view>
 
 			<!-- 人脸照片 -->
-			<view class="face-card" @click="chooseImage">
+			<view v-if="showEnrollmentForm && cameraEnabled" class="door-camera-card">
+				<u-button plain color="#35a5ed" shape="circle" :loading="cameraBusy" :disabled="uploading"
+					@click="startDoorCapture" text="到门禁前，用设备摄像头拍照" />
+				<view class="door-camera-tip">请本人站到门禁摄像头前，一次只站一人。拍摄后先核对照片，再确认录入。</view>
+				<view v-if="cameraMessage" class="door-camera-message">{{ cameraMessage }}</view>
+				<view v-if="cameraSessionId" class="door-camera-cancel" @click="cancelDoorCapture">取消本次门禁拍照</view>
+			</view>
+			<view v-if="showEnrollmentForm" class="face-card" @click="chooseImage">
 				<image v-if="faceUrl" :src="faceUrl" class="face-img" mode="aspectFill" />
 				<view v-else class="face-placeholder">
 					<u-icon name="camera-fill" color="#bbbbbb" size="80"></u-icon>
@@ -26,28 +35,11 @@
 				</view>
 			</view>
 
-			<!-- 当前档案状态 -->
-			<view v-if="profile && profile.jobnumber" class="status-card">
-				<view class="status-row">
-					<u-text size="28" color="#333" text="人脸下发状态：" />
-					<u-tag :text="syncLabel(profile.syncStatus)" :type="syncType(profile.syncStatus)" size="mini" />
-				</view>
-				<view class="status-row" v-if="profile.syncErrmsg">
-					<u-text size="26" color="#e64340" :text="profile.syncErrmsg" />
-				</view>
-				<view class="status-row" v-if="profile.jobnumber">
-					<u-text size="26" color="#999" :text="'门禁工号：' + profile.jobnumber" />
-				</view>
-				<!-- 门禁设备真实在线情况: 人脸"已下发"不等于设备在线 -->
-				<view class="status-row">
-					<u-text size="26" :color="deviceOnline ? '#67c23a' : '#e64340'"
-						:text="deviceOnline ? '门禁设备在线' : ('门禁设备不在线' + (profile.deviceLastOnline ? '（最后在线 ' + profile.deviceLastOnline + '）' : '（从未接入）'))" />
-				</view>
-			</view>
-
-			<view style="margin-top: 30rpx;">
+			<view v-if="operationMessage" class="operation-message" :class="{ 'operation-success': operationSucceeded }">{{ operationMessage }}</view>
+			<view v-if="showEnrollmentForm" style="margin-top: 30rpx;">
 				<u-button color="#35a5ed" size="large" shape="circle" :loading="uploading" @click="upload"
-					text="提交人脸，开通门禁" />
+					:disabled="(!!cameraSessionId && cameraStatus !== 'READY') || profileLoading"
+					:text="cameraSessionId ? '确认照片是本人，完成录入' : (hasUploadedFace ? '确认更换人脸' : '提交人脸，开通门禁')" />
 			</view>
 
 			<!--
@@ -56,15 +48,6 @@
 			-->
 			<canvas canvas-id="faceCanvas" id="faceCanvas"
 				style="position: fixed; left: -9999px; top: -9999px; width: 800px; height: 800px;"></canvas>
-			<!--
-				一键开门: 显不显示由后端 profile.canOpenDoor 决定(= 当天有有效预约 且 本机真的开得了门)。
-				2026-10-09 定论: 本机设备跑的是"时之盾"私有协议(protocolVersion=0), 只订阅
-				iot/cli/<type>/<sn>/eth, 从未订阅厂商文档协议(cs)的主题; 实测把文档里的指令发过去
-				分别被回 code 7(不认该动作)/code 2(报文格式)/code 1(拒绝) —— 服务器发不出开门口令。
-				文档里的远程开门(F1openDoor)属于 protocolVersion=1 标准协议, 对本机不生效。
-				现场把设备协议改成标准协议并重启, 或加装开门继电器并配好 studyroom.door.open-url 后,
-				后端开关打开, 本按钮自动出现 —— 无需重新上传小程序。
-			-->
 			<view v-if="canOpenDoor" style="margin-top: 20rpx; padding: 24rpx; background: #f0fff6; border-radius: 16rpx;">
 				<u-text size="26" color="#19be6b" align="center" text="到店可直接点下面按钮开门, 也可以刷脸进门" />
 				<view style="margin-top: 16rpx; display: flex; justify-content: center;">
@@ -82,10 +65,10 @@
 			<view class="facepriv-card" @click.stop.prevent>
 				<view class="facepriv-title">人脸隐私告知</view>
 				<view class="facepriv-body">
-					<view class="facepriv-item">· 用途：你的人脸照片仅用于「到店刷脸开门」1:1 比对；</view>
-					<view class="facepriv-item">· 服务器不存储：照片会经本系统接口转发到门店门禁设备，服务器不留存、不落库；</view>
-					<view class="facepriv-item">· 仅门禁本地保存：照片只写入门店门禁设备本地，用于开门时比对；</view>
-					<view class="facepriv-item">· 有效期：门禁权限随本次预约结束自动失效，设备端人脸将被清除，也可随时联系门店删除。</view>
+					<view class="facepriv-item">· 用途：你的人脸照片仅用于本店门禁身份核验和刷脸开门；</view>
+					<view class="facepriv-item">· 采集方式：本人拍照/选择相册照片，或本人站在门禁前使用设备摄像头；门禁拍摄后需核对本人照片再确认；</view>
+					<view class="facepriv-item">· 临时处理：照片经服务器处理并下发门禁。门禁拍摄的预览在2分钟后或离开本页时清理；已下发照片的后台内存缓存约30分钟，不提供公开图片地址；</view>
+					<view class="facepriv-item">· 通行授权：通行时间由门店设置，可联系门店更新权限或删除设备端人脸。</view>
 				</view>
 				<view class="facepriv-btns">
 					<view class="facepriv-btn facepriv-no" @click.stop="refusePrivacy">不同意</view>
@@ -97,24 +80,44 @@
 </template>
 
 <script>
-	import { accessFaceUpload, accessProfile, accessOpenDoor } from '@/config/api.js'
+	import { accessFaceUpload, accessProfile, accessOpenDoor, accessCameraCapabilities, accessCameraStart, accessCameraStatus, accessCameraConfirm, accessCameraCancel } from '@/config/api.js'
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js'
+	import { FACE_CONSENT_KEY, cameraPreviewPath, isCameraPreviewFile } from '@/utils/door-camera.js'
 	export default {
 		data() {
 			return {
 				faceUrl: '',
 				faceBase64: '',
 				profile: null,
+				profileLoading: true,
+				profileGeneration: 0,
+				editingFace: false,
+				operationMessage: '',
+				operationSucceeded: false,
 				uploading: false,
+				cameraEnabled: false,
+				cameraBusy: false,
+				cameraStarting: false,
+				cameraStatus: '',
+				cameraMessage: '',
+				cameraSessionId: '',
+				cameraPreviewFile: '',
+				cameraTimer: null,
+				cameraGeneration: 0,
+				cameraActive: true,
+				cameraStartedAt: 0,
+				cameraExpiresAt: 0,
 				// 一键开门(仅当天有有效预约时可点; 后端会再校验)
 				doorLoading: false,
-				// 人脸隐私同意(独立key v2: 老版本同意过也要重新确认新隐私条款)
-				faceConsented: uni.getStorageSync('face_enroll_consent_v2') === '1',
+				// 新采集方式和临时缓存说明需重新确认。
+				faceConsented: uni.getStorageSync(FACE_CONSENT_KEY) === '1',
 				privacyShow: false,
 				privacyResolve: null
 			}
 		},
 		computed: {
+			hasUploadedFace() { return !!(this.profile && Number(this.profile.syncStatus) === 1) },
+			showEnrollmentForm() { return !this.profileLoading && (!this.hasUploadedFace || this.editingFace) },
 			// 是否显示「一键开门」: 后端按"当天有有效预约"判定, 与人脸下发状态无关
 			canOpenDoor() {
 				return !!(this.profile && this.profile.canOpenDoor)
@@ -129,6 +132,124 @@
 			}
 		},
 		methods: {
+			beginFaceEdit() { this.editingFace = true; this.operationMessage = '' },
+			cancelFaceEdit() { this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = ''; this.editingFace = false; this.operationMessage = '' },
+			applyEnrollmentResult(profile) {
+				this.profileGeneration++
+				this.profileLoading = false
+				// A failed replacement does not invalidate an earlier successful upload.
+				if (profile && Number(profile.syncStatus) === 1) {
+					this.profile = profile; this.editingFace = false; this.faceUrl = ''; this.faceBase64 = ''
+					this.operationSucceeded = true; this.operationMessage = '人脸已成功录入门禁'
+				} else {
+					if (!this.hasUploadedFace) this.profile = profile || this.profile
+					this.operationSucceeded = false
+					this.operationMessage = (profile && profile.syncErrmsg) || '本次录入尚未得到设备确认，请稍后重试或联系门店'
+				}
+				uni.$u.toast(this.operationMessage)
+			},
+			async startDoorCapture() {
+				if (this.cameraStarting || this.cameraBusy || this.uploading) return
+				this.operationMessage = ''
+				this.cameraStarting = true
+				try {
+				if (!await this.ensureFaceConsent()) return
+				await this.cancelDoorCapture()
+				if (!this.cameraActive) return
+				this.faceUrl = ''; this.faceBase64 = ''
+				const generation = this.cameraGeneration
+				this.cameraBusy = true; this.cameraStatus = 'WAITING'
+				this.cameraMessage = '请本人站到门禁摄像头前，保持正脸，正在请求拍照…'
+				this.cameraStartedAt = Date.now()
+				try {
+					const res = await accessCameraStart({}, { custom: { auth: true, catch: true } })
+					const session = res.data || {}
+					if (generation !== this.cameraGeneration || !this.cameraActive) {
+						if (session.sessionId) accessCameraCancel(session.sessionId, { custom: { auth: true, catch: true } }).catch(() => {})
+						return
+					}
+					if (!/^[a-f0-9]{32}$/.test(session.sessionId || '')) throw new Error('门禁未返回有效录脸会话')
+					this.cameraSessionId = session.sessionId
+					this.cameraExpiresAt = Number(session.expiresAt) || this.cameraStartedAt + 120000
+					this.pollDoorCapture(generation)
+				} catch (e) {
+					if (generation !== this.cameraGeneration) return
+					this.cameraBusy = false; this.cameraStatus = 'FAILED'
+					this.cameraMessage = (e && (e.msg || e.message)) || '门禁拍照请求失败，请稍后重试'
+				}
+				} finally { this.cameraStarting = false }
+			},
+			async pollDoorCapture(generation) {
+				const sessionId = this.cameraSessionId
+				if (!sessionId || !this.cameraActive || generation !== this.cameraGeneration) return
+				try {
+					const res = await accessCameraStatus(sessionId, { custom: { auth: true, catch: true } })
+					if (generation !== this.cameraGeneration || sessionId !== this.cameraSessionId || !this.cameraActive) return
+					const data = res.data || {}
+					this.cameraStatus = data.status || 'WAITING'
+					if (data.status === 'READY') {
+						this.cameraStatus = 'PROCESSING'
+						if (!data.imageBase64 || data.imageBase64.length > 300000) throw new Error('照片无效，请重新拍摄')
+						const path = await this.writeCameraPreview(data.imageBase64, sessionId)
+						if (generation !== this.cameraGeneration || !this.cameraActive) { this.removeCameraFile(path); return }
+						this.cameraPreviewFile = path; this.faceUrl = path
+						const remaining = (Number(data.expiresAt) || this.cameraExpiresAt || this.cameraStartedAt + 120000) - Date.now()
+						if (remaining <= 0) throw new Error('预览已超时，请重新拍摄')
+						this.cameraStatus = 'READY'
+						this.cameraBusy = false
+						this.cameraMessage = '请核对下方照片是你本人，再点击“确认照片是本人，完成录入”'
+						this.cameraTimer = setTimeout(() => {
+							if (generation !== this.cameraGeneration) return
+							this.cancelDoorCapture(); this.cameraMessage = '照片预览已超时，请重新拍摄'
+						}, remaining)
+						return
+					}
+					if (!['WAITING', 'PROCESSING'].includes(data.status)) throw new Error(data.message || '本次拍照已结束，请重试')
+					if (Date.now() - this.cameraStartedAt > 125000) throw new Error('门禁拍照超时，请重新发起')
+					this.cameraMessage = data.status === 'PROCESSING' ? '照片已回传，正在处理…' : '正在等待门禁拍照，请正对摄像头'
+					this.cameraTimer = setTimeout(() => this.pollDoorCapture(generation), 900)
+				} catch (e) {
+					if (generation !== this.cameraGeneration) return
+					this.cancelDoorCapture()
+					this.cameraMessage = (e && (e.msg || e.message)) || '照片未回传，请重新尝试'
+				}
+			},
+			writeCameraPreview(base64, sessionId) {
+				return new Promise((resolve, reject) => {
+					if (typeof wx === 'undefined' || !wx.env || !uni.getFileSystemManager) { resolve('data:image/jpeg;base64,' + base64); return }
+					const file = cameraPreviewPath(wx.env.USER_DATA_PATH, sessionId)
+					uni.getFileSystemManager().writeFile({ filePath: file, data: base64, encoding: 'base64', success: () => resolve(file), fail: () => reject(new Error('预览照片保存失败，请重试')) })
+				})
+			},
+			removeCameraFile(path) {
+				if (typeof wx !== 'undefined' && wx.env && uni.getFileSystemManager && isCameraPreviewFile(wx.env.USER_DATA_PATH, path)) {
+					uni.getFileSystemManager().unlink({ filePath: path, fail: () => {} })
+				}
+			},
+			cancelDoorCapture() {
+				clearTimeout(this.cameraTimer); this.cameraTimer = null; this.cameraGeneration++
+				const sessionId = this.cameraSessionId
+				this.cameraSessionId = ''; this.cameraBusy = false; this.cameraStatus = ''; this.cameraMessage = ''; this.cameraExpiresAt = 0
+				if (this.cameraPreviewFile) {
+					if (this.faceUrl === this.cameraPreviewFile) this.faceUrl = ''
+					this.removeCameraFile(this.cameraPreviewFile); this.cameraPreviewFile = ''
+				}
+				if (sessionId) return accessCameraCancel(sessionId, { custom: { auth: true, catch: true } }).catch(() => {})
+				return Promise.resolve()
+			},
+			async confirmDoorCapture() {
+				if (this.uploading || this.cameraStatus !== 'READY') return
+				this.uploading = true
+				try {
+					const res = await accessCameraConfirm(this.cameraSessionId, { custom: { auth: true, catch: true } })
+					this.cancelDoorCapture()
+					this.applyEnrollmentResult(res.data || null)
+				} catch (e) {
+					this.cancelDoorCapture()
+					this.operationSucceeded = false; this.operationMessage = (e && (e.msg || e.message)) || '本次录入失败，请重新拍摄'
+					uni.$u.toast(this.operationMessage)
+				} finally { this.uploading = false }
+			},
 			/** 人脸隐私告知(用途限定 + 存储策略): 未同意不采集; 已同意过(本版本)直接放行 */
 			ensureFaceConsent() {
 				if (this.faceConsented) return Promise.resolve(true)
@@ -140,7 +261,7 @@
 			agreePrivacy() {
 				this.privacyShow = false
 				this.faceConsented = true
-				uni.setStorageSync('face_enroll_consent_v2', '1')
+				uni.setStorageSync(FACE_CONSENT_KEY, '1')
 				var r = this.privacyResolve
 				this.privacyResolve = null
 				if (r) r(true)
@@ -150,19 +271,11 @@
 				var r = this.privacyResolve
 				this.privacyResolve = null
 				if (r) r(false)
-				uni.$u.toast('不同意将无法使用拍照/相册录入人脸，可长按二维码走官方通道，或到店咨询工作人员')
-			},
-			syncLabel(s) {
-				if (s === 1) return '已同步'
-				if (s === 2) return '同步失败'
-				return '待同步'
-			},
-			syncType(s) {
-				if (s === 1) return 'success'
-				if (s === 2) return 'error'
-				return 'primary'
+				uni.$u.toast('不同意将无法使用人脸录入，可联系门店使用其他进门方式')
 			},
 			async chooseImage() {
+				if (this.uploading) return
+				this.operationMessage = ''
 				var that = this
 				// 人脸采集前需单独同意，未同意则不拉起相机/相册
 				var agreed = await this.ensureFaceConsent()
@@ -173,13 +286,14 @@
 					uni.$u.toast('需先同意《隐私保护指引》才能拍照/选择相册照片')
 					return
 				}
+				this.cancelDoorCapture()
 				uni.chooseImage({
 					count: 1,
 					sizeType: ['compressed'],
 					sourceType: ['camera', 'album'],
 					success: (res) => {
 						var path = res.tempFilePaths[0]
-						that.faceUrl = path
+						that.faceUrl = path; that.faceBase64 = ''
 						that.compressToBase64(path)
 					}
 				})
@@ -241,6 +355,8 @@
 			},
 			// 原 saveQr()「保存二维码到相册」已随官方扫码通道一起移除(见模板注释)
 			async upload() {
+				if (this.cameraSessionId) return this.confirmDoorCapture()
+				if (this.uploading) return
 				if (!this.faceBase64) return uni.$u.toast('请先选择人脸照片')
 				// 提交前再次确认同意状态（防止本地缓存被清除）
 				if (!this.faceConsented) {
@@ -254,16 +370,10 @@
 				this.uploading = true
 				try {
 					const { data: profile } = await accessFaceUpload({ facePhotoBase64: this.faceBase64 }, { custom: { auth: true, catch: true } })
-					this.profile = profile
-					if (profile && profile.syncStatus === 1) {
-						uni.$u.toast('人脸已同步到门禁，可刷脸进门')
-					} else if (profile && profile.syncStatus === 2) {
-						uni.$u.toast((profile.syncErrmsg && profile.syncErrmsg.indexOf('未绑定') > -1) ? '自习室未绑定门禁设备' : '同步失败，请稍后重试')
-					} else {
-						uni.$u.toast('已提交，等待同步')
-					}
+					this.applyEnrollmentResult(profile)
 				} catch (e) {
-					uni.$u.toast((e && e.msg) || '上传失败，请稍后再试')
+					this.operationSucceeded = false; this.operationMessage = (e && (e.msg || e.message)) || '本次上传失败，请稍后再试'
+					uni.$u.toast(this.operationMessage)
 				} finally {
 					this.uploading = false
 				}
@@ -290,16 +400,20 @@
 				}
 			},
 			async loadProfile() {
+				const generation = ++this.profileGeneration
+				this.profileLoading = true
 				try {
 					const { data: profile } = await accessProfile({}, { custom: { auth: true, catch: true } })
-					this.profile = profile || null
+					if (generation === this.profileGeneration && this.cameraActive) this.profile = profile || null
 				} catch (e) {
-					this.profile = null
+					// Keep a known successful upload when the status request temporarily fails.
+				} finally {
+					if (generation === this.profileGeneration) this.profileLoading = false
 				}
 			}
 		},
 		onLoad() {
-			// 进入人脸界面即弹出「人脸隐私告知」(业务弹层: 用途限定 + 服务器不存储 + 仅门禁本地)
+			// 进入本页确认采集方式及短期处理说明。
 			// 同意后再走微信《隐私保护指引》授权(相机/相册, 官方弹窗, 未同意不阻塞浏览)
 			this.ensureFaceConsent().then((ok) => {
 				if (ok) {
@@ -308,8 +422,13 @@
 			})
 		},
 		onShow() {
+			this.cameraActive = true
+			this.operationMessage = ''; this.editingFace = false
 			this.loadProfile()
-		}
+			accessCameraCapabilities({ custom: { auth: true, catch: true } }).then(res => { this.cameraEnabled = !!(res.data && res.data.enabled) }).catch(() => { this.cameraEnabled = false })
+		},
+		onHide() { this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = '' },
+		onUnload() { this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = '' }
 	}
 </script>
 
@@ -324,6 +443,10 @@
 		padding: 20rpx 24rpx;
 		margin-bottom: 30rpx;
 	}
+	.door-camera-card { margin-bottom: 24rpx; padding: 24rpx; background: #f0f7ff; border-radius: 16rpx; }
+	.door-camera-tip { margin-top: 16rpx; color: #666; font-size: 24rpx; line-height: 1.7; }
+	.door-camera-message { margin-top: 16rpx; color: #2876b5; font-size: 26rpx; line-height: 1.7; }
+	.door-camera-cancel { margin-top: 18rpx; color: #888; font-size: 24rpx; text-align: center; }
 
 	/* 原 .qr-card / .qr-title-row / .qr-box / .qr-img 已随官方扫码通道移除 */
 
@@ -350,18 +473,13 @@
 		justify-content: center;
 	}
 
-	.status-card {
-		background: #fff;
-		border-radius: 16rpx;
-		padding: 24rpx;
-		margin-top: 30rpx;
-	}
-
-	.status-row {
-		display: flex;
-		align-items: center;
-		margin-bottom: 12rpx;
-	}
+	.enrollment-card { margin-bottom: 28rpx; padding: 28rpx; background: #f6faff; border-radius: 20rpx; }
+	.enrollment-heading { display: flex; align-items: center; }
+	.enrollment-title { margin-left: 14rpx; color: #25354a; font-size: 32rpx; font-weight: 600; }
+	.enrollment-description { margin-top: 18rpx; color: #718096; font-size: 25rpx; line-height: 1.8; }
+	.edit-face { display: inline-block; margin-top: 24rpx; padding: 14rpx 28rpx; border: 1rpx solid #35a5ed; border-radius: 40rpx; color: #278dc9; font-size: 26rpx; }
+	.operation-message { margin-top: 24rpx; padding: 22rpx 24rpx; border-radius: 14rpx; background: #fff8ec; color: #966623; font-size: 25rpx; line-height: 1.7; }
+	.operation-success { background: #effaf4; color: #288454; }
 
 	/* 人脸隐私告知弹层 */
 	.facepriv-mask {

@@ -86,15 +86,17 @@ module.exports = {
       if (config.resolveLoader) {
         var uniModules = path.join(plugins, 'uniapp-cli/node_modules')
         if (config.resolveLoader.modules) {
-          if (config.resolveLoader.modules.indexOf(uniModules) === -1) {
-            config.resolveLoader.modules.push(uniModules)
-          }
+          // Keep compiler loaders on the same uni-cli-shared JSON cache as the
+          // HBuilderX plugin; mixing project loaders can silently omit app.json.
+          config.resolveLoader.modules = [uniModules].concat(config.resolveLoader.modules.filter(function (m) {
+            return m !== uniModules
+          }))
         } else {
-          config.resolveLoader.modules = ['node_modules', uniModules]
+          config.resolveLoader.modules = [uniModules, 'node_modules']
         }
       } else {
         config.resolveLoader = {
-          modules: ['node_modules', path.join(plugins, 'uniapp-cli/node_modules')]
+          modules: [path.join(plugins, 'uniapp-cli/node_modules'), 'node_modules']
         }
       }
     }
