@@ -14,18 +14,20 @@
 					<view class="enrollment-title">{{ profileLoading ? '正在读取人脸状态…' : (hasUploadedFace ? '已上传人脸' : '门禁人脸') }}</view>
 				</view>
 				<view class="enrollment-description">{{ hasUploadedFace ? '人脸已成功提交至门禁。如需更换照片，可重新录入。' : '如果已录过人脸并能正常刷脸进门，无需重复上传；需要新增或更换照片时，可在下方录入。' }}</view>
-				<view v-if="hasUploadedFace && !editingFace" class="edit-face" @click="beginFaceEdit">重新录入人脸</view>
-				<view v-if="hasUploadedFace && editingFace && !uploading" class="edit-face" @click="cancelFaceEdit">取消更换</view>
+				<view v-if="profileLoadError" class="profile-retry">{{ profileLoadError }}<text @click="loadProfile">重新读取</text></view>
+				<view v-if="!profileLoadError && hasUploadedFace && !editingFace" class="edit-face" @click="beginFaceEdit">重新录入人脸</view>
+				<view v-if="hasUploadedFace && editingFace && !uploading && !photoProcessing && cameraStatus !== 'REGISTERING'" class="edit-face" @click="cancelFaceEdit">取消更换</view>
 			</view>
 
 			<!-- 人脸照片 -->
 			<view v-if="showEnrollmentForm && cameraEnabled" class="door-camera-card">
-				<u-button plain color="#35a5ed" shape="circle" :loading="cameraBusy" :disabled="uploading"
+				<u-button plain color="#35a5ed" shape="circle" :loading="cameraBusy || cameraStarting" :disabled="uploading || photoSelecting || photoProcessing || cameraStatus === 'REGISTERING'"
 					@click="startDoorCapture" text="到门禁前，用设备摄像头拍照" />
 				<view class="door-camera-tip">请本人站到门禁摄像头前，一次只站一人。拍摄后先核对照片，再确认录入。</view>
 				<view v-if="cameraMessage" class="door-camera-message">{{ cameraMessage }}</view>
-				<view v-if="cameraSessionId" class="door-camera-cancel" @click="cancelDoorCapture">取消本次门禁拍照</view>
+				<view v-if="cameraSessionId && !uploading && cameraStatus !== 'REGISTERING'" class="door-camera-cancel" @click="cancelDoorCapture">取消本次门禁拍照</view>
 			</view>
+			<view v-if="photoProcessing" class="photo-progress">正在处理照片，请稍候…</view>
 			<view v-if="showEnrollmentForm" class="face-card" @click="chooseImage">
 				<image v-if="faceUrl" :src="faceUrl" class="face-img" mode="aspectFill" />
 				<view v-else class="face-placeholder">
@@ -37,9 +39,9 @@
 
 			<view v-if="operationMessage" class="operation-message" :class="{ 'operation-success': operationSucceeded }">{{ operationMessage }}</view>
 			<view v-if="showEnrollmentForm" style="margin-top: 30rpx;">
-				<u-button color="#35a5ed" size="large" shape="circle" :loading="uploading" @click="upload"
-					:disabled="(!!cameraSessionId && cameraStatus !== 'READY') || profileLoading"
-					:text="cameraSessionId ? '确认照片是本人，完成录入' : (hasUploadedFace ? '确认更换人脸' : '提交人脸，开通门禁')" />
+				<u-button color="#35a5ed" size="large" shape="circle" :loading="uploading || photoProcessing" @click="upload"
+					:disabled="!canSubmitFace"
+					:text="photoProcessing ? '正在处理照片…' : (cameraStatus === 'REGISTERING' ? '正在确认录入结果…' : (cameraSessionId ? '确认照片是本人，完成录入' : (hasUploadedFace ? '确认更换人脸' : '提交人脸，开通门禁')))" />
 			</view>
 
 			<!--
@@ -60,7 +62,7 @@
 				</view>
 			</view>
 		</view>
-		<!-- 人脸隐私告知弹窗(进入页面即弹出; 不同意无法使用拍照录入) -->
+		<!-- 发起采集时单独征得同意，浏览状态不需要打开相机或相册。 -->
 		<view v-if="privacyShow" class="facepriv-mask" @click.stop.prevent="refusePrivacy">
 			<view class="facepriv-card" @click.stop.prevent>
 				<view class="facepriv-title">人脸隐私告知</view>
@@ -83,6 +85,7 @@
 	import { accessFaceUpload, accessProfile, accessOpenDoor, accessCameraCapabilities, accessCameraStart, accessCameraStatus, accessCameraConfirm, accessCameraCancel } from '@/config/api.js'
 	import { ensurePrivacyAuth } from '@/utils/privacy-auth.js'
 	import { FACE_CONSENT_KEY, cameraPreviewPath, isCameraPreviewFile } from '@/utils/door-camera.js'
+	import { prepareFacePhoto } from '@/utils/door-face-photo.js'
 	export default {
 		data() {
 			return {
@@ -91,6 +94,11 @@
 				profile: null,
 				profileLoading: true,
 				profileGeneration: 0,
+				profileLoadError: '',
+				photoSelecting: false,
+				photoProcessing: false,
+				photoGeneration: 0,
+				pendingPhotoSelection: null,
 				editingFace: false,
 				operationMessage: '',
 				operationSucceeded: false,
@@ -112,34 +120,36 @@
 				// 新采集方式和临时缓存说明需重新确认。
 				faceConsented: uni.getStorageSync(FACE_CONSENT_KEY) === '1',
 				privacyShow: false,
-				privacyResolve: null
+				privacyResolve: null,
+				privacyPromise: null
 			}
 		},
 		computed: {
 			hasUploadedFace() { return !!(this.profile && Number(this.profile.syncStatus) === 1) },
-			showEnrollmentForm() { return !this.profileLoading && (!this.hasUploadedFace || this.editingFace) },
+			showEnrollmentForm() { return !this.profileLoading && !this.profileLoadError && (!this.hasUploadedFace || this.editingFace) },
+			canSubmitFace() {
+				return !this.uploading && !this.photoSelecting && !this.photoProcessing && !this.cameraStarting && !this.profileLoading && !this.profileLoadError
+					&& (this.cameraSessionId ? this.cameraStatus === 'READY' : !!this.faceBase64)
+			},
 			// 是否显示「一键开门」: 后端按"当天有有效预约"判定, 与人脸下发状态无关
 			canOpenDoor() {
 				return !!(this.profile && this.profile.canOpenDoor)
-			},
-			// 门禁设备是否在线: 超过 1 天未上线即视为离线(与后端 buildPublishFailReason 口径一致)
-			deviceOnline() {
-				var t = this.profile && this.profile.deviceLastOnline
-				if (!t) return false
-				var d = new Date(String(t).replace(/-/g, '/'))
-				if (isNaN(d.getTime())) return false
-				return (Date.now() - d.getTime()) < 86400000
 			}
 		},
 		methods: {
 			beginFaceEdit() { this.editingFace = true; this.operationMessage = '' },
-			cancelFaceEdit() { this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = ''; this.editingFace = false; this.operationMessage = '' },
+			clearSelectedPhoto() { this.photoGeneration++; this.pendingPhotoSelection = null; this.faceUrl = ''; this.faceBase64 = '' },
+			cancelFaceEdit() {
+				if (this.uploading || this.photoProcessing || this.cameraStatus === 'REGISTERING') return
+				this.cancelDoorCapture(); this.clearSelectedPhoto(); this.editingFace = false; this.operationMessage = ''
+			},
 			applyEnrollmentResult(profile) {
 				this.profileGeneration++
 				this.profileLoading = false
+				this.profileLoadError = ''
 				// A failed replacement does not invalidate an earlier successful upload.
 				if (profile && Number(profile.syncStatus) === 1) {
-					this.profile = profile; this.editingFace = false; this.faceUrl = ''; this.faceBase64 = ''
+					this.profile = profile; this.editingFace = false; this.clearSelectedPhoto()
 					this.operationSucceeded = true; this.operationMessage = '人脸已成功录入门禁'
 				} else {
 					if (!this.hasUploadedFace) this.profile = profile || this.profile
@@ -149,14 +159,14 @@
 				uni.$u.toast(this.operationMessage)
 			},
 			async startDoorCapture() {
-				if (this.cameraStarting || this.cameraBusy || this.uploading) return
+				if (this.cameraStarting || this.cameraBusy || this.uploading || this.photoSelecting || this.photoProcessing || this.cameraStatus === 'REGISTERING') return
 				this.operationMessage = ''
 				this.cameraStarting = true
 				try {
 				if (!await this.ensureFaceConsent()) return
 				await this.cancelDoorCapture()
 				if (!this.cameraActive) return
-				this.faceUrl = ''; this.faceBase64 = ''
+				this.clearSelectedPhoto()
 				const generation = this.cameraGeneration
 				this.cameraBusy = true; this.cameraStatus = 'WAITING'
 				this.cameraMessage = '请本人站到门禁摄像头前，保持正脸，正在请求拍照…'
@@ -187,6 +197,21 @@
 					if (generation !== this.cameraGeneration || sessionId !== this.cameraSessionId || !this.cameraActive) return
 					const data = res.data || {}
 					this.cameraStatus = data.status || 'WAITING'
+					if (['SUCCEEDED', 'FAILED'].includes(data.status) && data.profile) {
+						this.cancelDoorCapture(); this.applyEnrollmentResult(data.profile); return
+					}
+					if (data.status === 'SUCCEEDED') {
+						// Older servers expose completion without an attached receipt.
+						const current = await accessProfile({}, { custom: { auth: true, catch: true } })
+						if (!this.cameraActive || generation !== this.cameraGeneration) return
+						if (!current.data || Number(current.data.syncStatus) !== 1) throw new Error('门禁已完成本次录入，请重新进入本页查看人脸记录')
+						this.cancelDoorCapture(); this.applyEnrollmentResult(current.data); return
+					}
+					if (data.status === 'REGISTERING') {
+						if (Date.now() - this.cameraStartedAt > 125000) throw new Error('录入结果暂未确认，请稍后重新进入本页查看，避免反复提交')
+						this.cameraBusy = true; this.cameraMessage = '正在确认门禁录入结果，请稍候…'
+						this.cameraTimer = setTimeout(() => this.pollDoorCapture(generation), 900); return
+					}
 					if (data.status === 'READY') {
 						this.cameraStatus = 'PROCESSING'
 						if (!data.imageBase64 || data.imageBase64.length > 300000) throw new Error('照片无效，请重新拍摄')
@@ -210,8 +235,9 @@
 					this.cameraTimer = setTimeout(() => this.pollDoorCapture(generation), 900)
 				} catch (e) {
 					if (generation !== this.cameraGeneration) return
+					const confirming = this.cameraStatus === 'REGISTERING'
 					this.cancelDoorCapture()
-					this.cameraMessage = (e && (e.msg || e.message)) || '照片未回传，请重新尝试'
+					this.cameraMessage = confirming ? '录入结果暂未确认，请稍后重新进入本页查看，避免反复提交' : ((e && (e.msg || e.message)) || '照片未回传，请重新尝试')
 				}
 			},
 			writeCameraPreview(base64, sessionId) {
@@ -239,24 +265,31 @@
 			},
 			async confirmDoorCapture() {
 				if (this.uploading || this.cameraStatus !== 'READY') return
+				const generation = this.cameraGeneration
+				clearTimeout(this.cameraTimer); this.cameraTimer = null
 				this.uploading = true
 				try {
 					const res = await accessCameraConfirm(this.cameraSessionId, { custom: { auth: true, catch: true } })
+					if (!this.cameraActive || generation !== this.cameraGeneration) return
 					this.cancelDoorCapture()
 					this.applyEnrollmentResult(res.data || null)
 				} catch (e) {
-					this.cancelDoorCapture()
-					this.operationSucceeded = false; this.operationMessage = (e && (e.msg || e.message)) || '本次录入失败，请重新拍摄'
-					uni.$u.toast(this.operationMessage)
+					if (!this.cameraActive || generation !== this.cameraGeneration) return
+					// A network timeout is not a device rejection. Read this same session's receipt.
+					this.cameraStatus = 'REGISTERING'; this.cameraBusy = true
+					this.cameraMessage = '正在查询本次录入结果，请稍候…'
+					await this.pollDoorCapture(generation)
 				} finally { this.uploading = false }
 			},
 			/** 人脸隐私告知(用途限定 + 存储策略): 未同意不采集; 已同意过(本版本)直接放行 */
 			ensureFaceConsent() {
 				if (this.faceConsented) return Promise.resolve(true)
-				return new Promise((resolve) => {
+				if (this.privacyPromise) return this.privacyPromise
+				this.privacyPromise = new Promise((resolve) => {
 					this.privacyResolve = resolve
 					this.privacyShow = true
 				})
+				return this.privacyPromise
 			},
 			agreePrivacy() {
 				this.privacyShow = false
@@ -264,119 +297,81 @@
 				uni.setStorageSync(FACE_CONSENT_KEY, '1')
 				var r = this.privacyResolve
 				this.privacyResolve = null
+				this.privacyPromise = null
 				if (r) r(true)
 			},
 			refusePrivacy() {
 				this.privacyShow = false
 				var r = this.privacyResolve
 				this.privacyResolve = null
+				this.privacyPromise = null
 				if (r) r(false)
 				uni.$u.toast('不同意将无法使用人脸录入，可联系门店使用其他进门方式')
 			},
+			dismissFaceConsent() {
+				this.privacyShow = false
+				const resolve = this.privacyResolve
+				this.privacyResolve = null; this.privacyPromise = null
+				if (resolve) resolve(false)
+			},
 			async chooseImage() {
-				if (this.uploading) return
-				this.operationMessage = ''
-				var that = this
-				// 人脸采集前需单独同意，未同意则不拉起相机/相册
-				var agreed = await this.ensureFaceConsent()
-				if (!agreed) return
-				// 微信隐私保护指引授权（相机/相册/选中的照片）：未同意则微信官方弹窗提示
-				var privacyOk = await ensurePrivacyAuth()
-				if (!privacyOk) {
-					uni.$u.toast('需先同意《隐私保护指引》才能拍照/选择相册照片')
-					return
-				}
-				this.cancelDoorCapture()
-				uni.chooseImage({
-					count: 1,
-					sizeType: ['compressed'],
-					sourceType: ['camera', 'album'],
-					success: (res) => {
-						var path = res.tempFilePaths[0]
-						that.faceUrl = path; that.faceBase64 = ''
-						that.compressToBase64(path)
-					}
-				})
-			},
-			compressToBase64(path) {
-				var that = this
-				// 原实现只是把原图 readFile 成 base64 —— 名为压缩、实为不压缩,
-				// 所以手机原图(3~5MB)转 base64 必然超过 30 万字符的门槛, 用户怎么压都没用。
-				// 现在真的用 canvas 缩放 + 转 JPEG:
-				//   ① 门禁设备要求宽高 < 1024, 原图分辨率本来就不合规;
-				//   ② 设备只吃 JPEG;
-				//   ③ 缩到 800px/质量 0.7 后 base64 通常 10~25 万字符, 稳稳在门槛内。
-				var MAX = 800
-				var QUALITY = 0.7
-				var fallback = function() {
-					uni.getFileSystemManager().readFile({
-						filePath: path,
-						encoding: 'base64',
-						success: (r) => { that.faceBase64 = r.data },
-						fail: () => { that.faceBase64 = ''; uni.$u.toast('读取照片失败') }
-					})
-				}
-				uni.getImageInfo({
-					src: path,
-					success: (info) => {
-						var w = info.width || 0
-						var h = info.height || 0
-						if (!w || !h) return fallback()
-						if (w > MAX || h > MAX) {
-							var ratio = Math.min(MAX / w, MAX / h)
-							w = Math.round(w * ratio)
-							h = Math.round(h * ratio)
-						}
-						var ctx = uni.createCanvasContext('faceCanvas', that)
-						ctx.drawImage(info.path, 0, 0, w, h)
-						ctx.draw(false, function() {
-							uni.canvasToTempFilePath({
-								canvasId: 'faceCanvas',
-								width: w,
-								height: h,
-								destWidth: w,
-								destHeight: h,
-								fileType: 'jpg',
-								quality: QUALITY,
-								success: (out) => {
-									uni.getFileSystemManager().readFile({
-										filePath: out.tempFilePath,
-										encoding: 'base64',
-										success: (r) => { that.faceBase64 = r.data },
-										fail: fallback
-									})
-								},
-								fail: fallback
-							}, that)
-						})
-					},
-					fail: fallback
-				})
-			},
-			// 原 saveQr()「保存二维码到相册」已随官方扫码通道一起移除(见模板注释)
-			async upload() {
-				if (this.cameraSessionId) return this.confirmDoorCapture()
-				if (this.uploading) return
-				if (!this.faceBase64) return uni.$u.toast('请先选择人脸照片')
-				// 提交前再次确认同意状态（防止本地缓存被清除）
-				if (!this.faceConsented) {
-					var agreed = await this.ensureFaceConsent()
-					if (!agreed) return
-				}
-				if (this.faceBase64.length > 300000) {
-					// 正常路径下 canvas 已缩到 800px/质量 0.7, 不该再到这; 到这说明压缩那步失败了
-					return uni.$u.toast('照片处理失败（' + Math.round(this.faceBase64.length / 1000) + 'K），请重选一张或改用拍照')
-				}
-				this.uploading = true
+				if (this.uploading || this.photoSelecting || this.photoProcessing || this.cameraStarting || this.cameraStatus === 'REGISTERING') return
+				this.photoSelecting = true; this.operationMessage = ''; this.editingFace = true
+				const generation = ++this.photoGeneration
 				try {
+					if (!await this.ensureFaceConsent()) return
+					if (!await ensurePrivacyAuth()) {
+						if (this.cameraActive) uni.$u.toast('需先同意《隐私保护指引》才能拍照或选择照片')
+						return
+					}
+					if (!this.cameraActive || generation !== this.photoGeneration) return
+					await this.cancelDoorCapture()
+					if (!this.cameraActive || generation !== this.photoGeneration) return
+					const selected = await new Promise((resolve, reject) => uni.chooseImage({
+						count: 1, sizeType: ['compressed'], sourceType: ['camera', 'album'], success: resolve, fail: reject
+					}))
+					if (generation !== this.photoGeneration) return
+					const path = selected.tempFilePaths && selected.tempFilePaths[0]
+					if (!path) return
+					// Native photo pickers may temporarily hide the page. Process on return.
+					if (!this.cameraActive) { this.pendingPhotoSelection = { path, generation }; return }
+					await this.processSelectedPhoto(path, generation)
+				} catch (error) {
+					if (this.cameraActive && generation === this.photoGeneration && !/cancel/i.test(String(error && error.errMsg))) {
+						this.operationSucceeded = false; this.operationMessage = '未能选择照片，请重新拍摄或选择'
+					}
+				} finally { this.photoSelecting = false }
+			},
+			async processSelectedPhoto(path, generation) {
+				if (!this.cameraActive || generation !== this.photoGeneration) return
+				this.faceUrl = path; this.faceBase64 = ''; this.photoProcessing = true
+				try {
+					const base64 = await prepareFacePhoto(uni, this, path, () => this.cameraActive && generation === this.photoGeneration)
+					if (this.cameraActive && generation === this.photoGeneration) this.faceBase64 = base64
+				} catch (error) {
+					if (this.cameraActive && generation === this.photoGeneration) {
+						this.faceBase64 = ''; this.operationSucceeded = false
+						this.operationMessage = error.message || '照片处理失败，请重新选择'
+					}
+				} finally { this.photoProcessing = false }
+			},
+			async upload() {
+				if (!this.canSubmitFace) return
+				if (this.cameraSessionId) return this.confirmDoorCapture()
+				const generation = this.photoGeneration
+				this.uploading = true; this.operationMessage = ''
+				try {
+					if (!await this.ensureFaceConsent()) return
+					if (!this.cameraActive || generation !== this.photoGeneration) return
+					if (this.faceBase64.length > 300000) throw new Error('照片太大，请重新选择照片')
 					const { data: profile } = await accessFaceUpload({ facePhotoBase64: this.faceBase64 }, { custom: { auth: true, catch: true } })
-					this.applyEnrollmentResult(profile)
-				} catch (e) {
-					this.operationSucceeded = false; this.operationMessage = (e && (e.msg || e.message)) || '本次上传失败，请稍后再试'
-					uni.$u.toast(this.operationMessage)
-				} finally {
-					this.uploading = false
-				}
+					if (this.cameraActive && generation === this.photoGeneration) this.applyEnrollmentResult(profile)
+				} catch (error) {
+					if (this.cameraActive && generation === this.photoGeneration) {
+						this.operationSucceeded = false; this.operationMessage = (error && (error.msg || error.message)) || '本次上传未完成，请稍后重新查看人脸状态'
+						uni.$u.toast(this.operationMessage)
+					}
+				} finally { this.uploading = false }
 			},
 			/**
 			 * 一键开门(2026-10-08 恢复)。
@@ -401,34 +396,36 @@
 			},
 			async loadProfile() {
 				const generation = ++this.profileGeneration
-				this.profileLoading = true
+				this.profileLoading = true; this.profileLoadError = ''
 				try {
 					const { data: profile } = await accessProfile({}, { custom: { auth: true, catch: true } })
 					if (generation === this.profileGeneration && this.cameraActive) this.profile = profile || null
 				} catch (e) {
-					// Keep a known successful upload when the status request temporarily fails.
+					if (generation === this.profileGeneration && this.cameraActive) this.profileLoadError = '人脸记录暂时读取不到，请稍后重试。'
 				} finally {
 					if (generation === this.profileGeneration) this.profileLoading = false
 				}
 			}
 		},
-		onLoad() {
-			// 进入本页确认采集方式及短期处理说明。
-			// 同意后再走微信《隐私保护指引》授权(相机/相册, 官方弹窗, 未同意不阻塞浏览)
-			this.ensureFaceConsent().then((ok) => {
-				if (ok) {
-					ensurePrivacyAuth()
-				}
-			})
-		},
 		onShow() {
 			this.cameraActive = true
-			this.operationMessage = ''; this.editingFace = false
+			this.operationMessage = ''
+			if (!this.photoSelecting && !this.pendingPhotoSelection && !this.photoProcessing) this.editingFace = false
 			this.loadProfile()
-			accessCameraCapabilities({ custom: { auth: true, catch: true } }).then(res => { this.cameraEnabled = !!(res.data && res.data.enabled) }).catch(() => { this.cameraEnabled = false })
+			if (this.pendingPhotoSelection) {
+				const selected = this.pendingPhotoSelection; this.pendingPhotoSelection = null
+				this.processSelectedPhoto(selected.path, selected.generation)
+			}
+			accessCameraCapabilities({ custom: { auth: true, catch: true } }).then(res => { if (this.cameraActive) this.cameraEnabled = !!(res.data && res.data.enabled) }).catch(() => { if (this.cameraActive) this.cameraEnabled = false })
 		},
-		onHide() { this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = '' },
-		onUnload() { this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.faceUrl = ''; this.faceBase64 = '' }
+		onHide() {
+			this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.dismissFaceConsent()
+			if (!this.photoSelecting || this.photoProcessing) this.clearSelectedPhoto()
+			else { this.faceUrl = ''; this.faceBase64 = '' }
+		},
+		onUnload() {
+			this.cameraActive = false; this.profileGeneration++; this.cancelDoorCapture(); this.dismissFaceConsent(); this.clearSelectedPhoto()
+		}
 	}
 </script>
 
@@ -476,6 +473,9 @@
 	.enrollment-card { margin-bottom: 28rpx; padding: 28rpx; background: #f6faff; border-radius: 20rpx; }
 	.enrollment-heading { display: flex; align-items: center; }
 	.enrollment-title { margin-left: 14rpx; color: #25354a; font-size: 32rpx; font-weight: 600; }
+	.profile-retry { margin-top: 18rpx; color: #718096; font-size: 25rpx; line-height: 1.8; }
+	.profile-retry text { display: inline-block; margin-left: 12rpx; color: #278dc9; }
+	.photo-progress { margin-top: 20rpx; color: #718096; font-size: 25rpx; text-align: center; }
 	.enrollment-description { margin-top: 18rpx; color: #718096; font-size: 25rpx; line-height: 1.8; }
 	.edit-face { display: inline-block; margin-top: 24rpx; padding: 14rpx 28rpx; border: 1rpx solid #35a5ed; border-radius: 40rpx; color: #278dc9; font-size: 26rpx; }
 	.operation-message { margin-top: 24rpx; padding: 22rpx 24rpx; border-radius: 14rpx; background: #fff8ec; color: #966623; font-size: 25rpx; line-height: 1.7; }
