@@ -7,3 +7,5 @@
 尚未开灯的预约两小时后自动释放并恢复体验卡，之前也可手动取消。迟到后座位后续两小时与其它预约冲突时需换座。该规则在预约页明确展示。
 
 验证：`node tests/new-user-trial.test.cjs`、`node tests/timed-booking.test.cjs`，以及 `_check_vue.js` 的五个修改组件、`_check_pages.js` 均通过。后端说明见同级后端项目 `docs/new-user-trial.md`，迁移为 `script/sql/new_user_trial_migration.sql`。尚未执行生产迁移、部署或小程序上传发布，仍需现场灯控与门禁验收。
+
+2026-10-31 兼容修复：后端登录响应新增 `trialApiVersion=1`，前端从正常登录和静默重登的响应中记录此能力，只有当前账号确认支持时才调用 `/api/wx/trial/status`。旧后端或尚未重新登录的缓存会话不请求新接口，并沿用联系客服的新人引导。后端升级后重新登录即可读取能力；推送 Git 不会更新线上后端服务。

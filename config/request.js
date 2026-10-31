@@ -1,5 +1,6 @@
 // 正常参数为页面的实例，可以通过它引用vuex中的变量
 const appConfig = require('./config.js')
+const { recordLoginCapabilities } = require('../utils/server-capabilities.js')
 
 // 是否正在重新登录（防止多个401并发时重复触发重登）
 let reloginPromise = null
@@ -189,6 +190,9 @@ module.exports = (vm) => {
 			// 若响应含 userId(用户资料/登录等), 存入本地供"我的排名"等按 userId 匹配
 			if (data.data.userId != null) {
 				uni.setStorageSync('userId', String(data.data.userId))
+			}
+			if (isLoginApi(response.config && response.config.url) && data.data.token) {
+				recordLoginCapabilities(data.data)
 			}
 		}
 		return data.data == undefined ? {

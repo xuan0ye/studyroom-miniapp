@@ -12,9 +12,11 @@
  */
 
 import { accessProfile, newUserTrialStatus } from '@/config/api.js'
+import { supportsTrialApi } from '@/utils/server-capabilities.js'
 
 const FACE_PAGE = '/other_pages/access/face-enroll'
 const TRIAL_PAGE = '/other_pages/timed-booking/timed-booking?trial=1'
+const FEEDBACK_PAGE = '/other_pages/feedback/feedback'
 let guideRunning = false
 
 // 与 config/request.js 里的字面量保持一致(那边不 import 本文件, 避免 api.js 循环依赖)
@@ -45,16 +47,18 @@ export function markNewUserFromLogin(loginData) {
 export function showNewUserGuide() {
 	if (uni.getStorageSync(KEY_NEW_USER_DONE)) return
 	uni.setStorageSync(KEY_NEW_USER_DONE, 1)
+	const trialReady = supportsTrialApi()
 	uni.showModal({
 		title: '欢迎新同学 🎉',
-		content: '① 新用户绑定手机号后自动领两小时体验卡，每个手机号限一次。\n'
+		content: trialReady ? '① 新用户绑定手机号后自动领两小时体验卡，每个手机号限一次。\n'
 			+ '② 先预约座位，再录入门禁人脸，到座位后开灯。\n\n'
-			+ '首次开灯成功起连续计时两小时，到期自动关灯并取消体验权限。',
-		confirmText: '查看体验卡',
+			+ '首次开灯成功起连续计时两小时，到期自动关灯并取消体验权限。'
+			: '① 新人体验卡：请联系客服咨询领取。\n② 请先预约座位，再录入门禁人脸，到店后刷脸进门。',
+		confirmText: trialReady ? '查看体验卡' : '查看客服',
 		cancelText: '稍后再说',
 		success(res) {
 			if (res.confirm) {
-				go(TRIAL_PAGE)
+				go(trialReady ? TRIAL_PAGE : FEEDBACK_PAGE)
 			}
 		}
 	})
@@ -99,7 +103,9 @@ export async function runUserGuide() {
 	if (!uni.getStorageSync('token') || guideRunning) return
 	guideRunning = true
 	try {
-		const res = await newUserTrialStatus({}, { custom: { auth: true, catch: true, toast: false } })
+		// Do not call an endpoint that the deployed server has not advertised.
+		const res = supportsTrialApi()
+			? await newUserTrialStatus({}, { custom: { auth: true, catch: true, toast: false } }) : null
 		const trial = res && res.data
 		const noticeKey = trial && trial.cardUserId ? 'trialGiftNotice_' + trial.cardUserId : ''
 		if (trial && trial.received && noticeKey && !uni.getStorageSync(noticeKey)) {
