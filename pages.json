@@ -99,6 +99,13 @@
 					}
 				},
 				{
+					"path": "store-wifi/store-wifi",
+					"style": {
+						"navigationBarTitleText": "到店 Wi-Fi",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "feedback/feedback",
 					"style": {
 						"navigationBarTitleText": "意见反馈",

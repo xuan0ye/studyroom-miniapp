@@ -71,6 +71,11 @@
 				<u-button size="small" type="success" color="#19be6b" shape="circle"
 					:loading="doorLoading" @click="openDoor" text="一键开门" />
 			</view>
+			<navigator v-if="storeWifiAvailable" class="store-wifi-card" url="/other_pages/store-wifi/store-wifi" hover-class="store-wifi-card-hover">
+				<view class="store-wifi-icon"><u-icon name="wifi" color="#2586c5" size="34" /></view>
+				<text class="store-wifi-title">到店 Wi-Fi</text>
+				<u-icon name="arrow-right" color="#64748b" size="24" />
+			</navigator>
 			<!-- 我的周期卡(周卡/月卡: 开卡日期/到期日期/锁座状态) -->
 			<view v-if="myCards.length > 0" class="my-card-status">
 				<view class="my-card-status-title">
@@ -171,11 +176,13 @@
 	import { isCardUsable, isCardUnused, cardRemainDays, cardDate } from '@/utils/card-usable.js'
 	import { timedBookingActive } from '@/utils/timed-booking.js'
 	import { isLoggedIn } from '@/utils/auth.js'
+	import { storeWifi } from '@/config/store-wifi.js'
 import { runUserGuide } from '@/utils/user-guide.js'
 	import { hasPromoPrice, formatPromoPrice, formatPromoUnit } from '@/utils/promo-display.js'
 	export default {
 		data() {
 			return {
+				storeWifiAvailable: Boolean(storeWifi.password),
 				swiperList: [],
 				show: false,
 				storeList: [],
@@ -661,6 +668,25 @@ import { runUserGuide } from '@/utils/user-guide.js'
 	}
 
 	// 一键开门(有今日预约才显示)
+	.store-wifi-card {
+		display: flex;
+		align-items: center;
+		margin: 18rpx 40rpx;
+		padding: 20rpx 26rpx;
+		border-radius: 20rpx;
+		background: #fff;
+	}
+	.store-wifi-card-hover { background: #eef7fd; }
+	.store-wifi-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 60rpx;
+		height: 60rpx;
+		border-radius: 16rpx;
+		background: #eaf5fd;
+	}
+	.store-wifi-title { flex: 1; margin-left: 18rpx; color: #24364a; font-size: 29rpx; font-weight: 600; }
 	.door-open-card {
 		display: flex;
 		justify-content: space-between;
