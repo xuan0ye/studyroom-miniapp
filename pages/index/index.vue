@@ -177,12 +177,13 @@
 	import { timedBookingActive } from '@/utils/timed-booking.js'
 	import { isLoggedIn } from '@/utils/auth.js'
 	import { storeWifi } from '@/config/store-wifi.js'
+	import { hasValidStoreWifiCard } from '@/utils/store-wifi.js'
 import { runUserGuide } from '@/utils/user-guide.js'
 	import { hasPromoPrice, formatPromoPrice, formatPromoUnit } from '@/utils/promo-display.js'
 	export default {
 		data() {
 			return {
-				storeWifiAvailable: Boolean(storeWifi.password),
+				storeWifiAvailable: false,
 				swiperList: [],
 				show: false,
 				storeList: [],
@@ -383,6 +384,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			 * 表现就是"已经退出登录了, 回到首页还在显示我的周期卡"。
 			 */
 			clearUserState() {
+				this._myCardsRequest = null
+				this.storeWifiAvailable = false
 				this.myCards = []
 				this.todayBooking = null
 				this.doorOpenEnabled = false
@@ -545,11 +548,14 @@ import { runUserGuide } from '@/utils/user-guide.js'
 			},
 			// 加载我的周期卡(周卡/月卡)信息: 开卡日期/到期日期/锁座状态
 			async loadMyCards() {
+				this.storeWifiAvailable = false
+				const request = getMyCard({}, { custom: { auth: true, catch: true, toast: false } })
+				this._myCardsRequest = request
 				try {
-					const res = await getMyCard({}, {
-						custom: { auth: true, catch: true, toast: false }
-					})
+					const res = await request
+					if (this._myCardsRequest !== request || !isLoggedIn()) return
 					const list = res && res.data ? res.data : res
+					this.storeWifiAvailable = Boolean(storeWifi.password) && hasValidStoreWifiCard(list)
 					if (!list || !list.length) {
 						this.myCards = []
 						return
@@ -584,6 +590,8 @@ import { runUserGuide } from '@/utils/user-guide.js'
 						}
 					})
 				} catch (e) {
+					if (this._myCardsRequest !== request) return
+					this.storeWifiAvailable = false
 					this.myCards = []
 				}
 			}

@@ -2,7 +2,8 @@
 	<view class="wifi-page">
 		<my-navbar leftText="到店 Wi-Fi" leftIcon="arrow-left" :custom="false" :autoBack="true" bgColor="#ffffff" leftIconSize="40" />
 		<view class="wifi-content">
-			<view v-if="wifi.password" class="wifi-panel">
+			<view v-if="checkingCard" class="wifi-panel">正在检查会员卡…</view>
+			<view v-else-if="canUseWifi" class="wifi-panel">
 				<view class="wifi-network">
 					<view class="wifi-icon"><u-icon name="wifi" size="46" color="#2586c5" /></view>
 					<view>
@@ -21,25 +22,67 @@
 				<text v-if="feedback" class="wifi-feedback" :class="{ 'wifi-confirmed': connected }" role="status">{{ feedback }}</text>
 				<text v-else class="wifi-feedback">也可在手机 Wi-Fi 设置中选择「{{ wifi.ssid }}」，输入上方密码。</text>
 			</view>
-			<view v-else class="wifi-panel">请向店员咨询门店 Wi-Fi。</view>
+			<view v-else class="wifi-panel">{{ unavailableMessage }}</view>
 		</view>
 	</view>
 </template>
 
 <script>
 	import { storeWifi } from '@/config/store-wifi.js'
-	import { connectStoreWifi } from '@/utils/store-wifi.js'
+	import { getMyCard } from '@/config/api.js'
+	import { isLoggedIn } from '@/utils/auth.js'
+	import { connectStoreWifi, hasValidStoreWifiCard } from '@/utils/store-wifi.js'
 
 	export default {
 		data() {
-			return { wifi: storeWifi, connecting: false, connected: false, feedback: '', unloaded: false }
+			return {
+				wifi: storeWifi,
+				checkingCard: true,
+				canUseWifi: false,
+				unavailableMessage: '',
+				connecting: false,
+				connected: false,
+				feedback: '',
+				unloaded: false
+			}
+		},
+		onShow() {
+			this.checkCard()
 		},
 		onUnload() {
 			this.unloaded = true
 		},
 		methods: {
+			async checkCard() {
+				this._cardRequest = null
+				this.canUseWifi = false
+				this.checkingCard = false
+				if (!isLoggedIn()) {
+					this.unavailableMessage = '请登录后使用到店 Wi-Fi。'
+					return
+				}
+				if (!this.wifi.password) {
+					this.unavailableMessage = '请向店员咨询门店 Wi-Fi。'
+					return
+				}
+				this.checkingCard = true
+				const request = getMyCard({}, { custom: { auth: true, catch: true, toast: false } })
+				this._cardRequest = request
+				try {
+					const res = await request
+					if (this.unloaded || this._cardRequest !== request) return
+					const cards = res && res.data ? res.data : res
+					this.canUseWifi = isLoggedIn() && hasValidStoreWifiCard(cards)
+					this.unavailableMessage = '持有效卡可使用到店 Wi-Fi。'
+				} catch (error) {
+					if (this.unloaded || this._cardRequest !== request) return
+					this.unavailableMessage = '暂时无法验证会员卡，请返回后重试。'
+				} finally {
+					if (!this.unloaded && this._cardRequest === request) this.checkingCard = false
+				}
+			},
 			async connect() {
-				if (this.connecting || !this.wifi.password) return
+				if (this.connecting || !this.canUseWifi || !isLoggedIn()) return
 				this.connecting = true
 				this.connected = false
 				this.feedback = ''
@@ -63,7 +106,7 @@
 				}
 			},
 			copyPassword() {
-				if (!this.wifi.password) return
+				if (!this.canUseWifi || !isLoggedIn()) return
 				uni.setClipboardData({
 					data: this.wifi.password,
 					fail: () => {

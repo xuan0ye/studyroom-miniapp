@@ -1,3 +1,14 @@
+import { cardDate, isCardUsable, isTimedCard } from './card-usable.js'
+
+export function hasValidStoreWifiCard(cards) {
+	return Array.isArray(cards) && cards.some(card => {
+		if (isCardUsable(card)) return true
+		// An hourly card stops being bookable as soon as it is booked, but still covers its session.
+		const end = isTimedCard(card) ? cardDate(card.expiryTime) : null
+		return !!end && end > new Date()
+	})
+}
+
 function callWifi(api, method, options = {}) {
 	return new Promise((resolve, reject) => {
 		api[method]({ ...options, success: resolve, fail: reject })
