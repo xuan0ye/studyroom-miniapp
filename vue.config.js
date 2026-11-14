@@ -67,8 +67,28 @@ function patchComponentCompilerUtils () {
   } catch (e) {}
 }
 
+function readStoreWifiPassword () {
+  const key = 'VUE_APP_STORE_WIFI_PASSWORD'
+  if (process.env[key] !== undefined) return process.env[key]
+  // HBuilderX's project compiler does not load the project's .env.local.
+  try {
+    const settings = fs.readFileSync(path.join(__dirname, '.env.local'), 'utf8')
+    const entry = settings.match(/^VUE_APP_STORE_WIFI_PASSWORD=(.*)$/m)
+    return entry ? entry[1].trim() : ''
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+    return ''
+  }
+}
+
 module.exports = {
   transpileDependencies: ['uview-ui'],
+  chainWebpack (config) {
+    config.plugin('define').tap(args => {
+      args[0].__STORE_WIFI_PASSWORD__ = JSON.stringify(readStoreWifiPassword())
+      return args
+    })
+  },
   configureWebpack: function (config) {
     // HBuilderX uniapp-cli 缩译时会移除 node_modules 瑭柉鏋愮洰褰?杩欓噷琛ュ洖鍏跺唴缃儇璧栧喎鐩褰?
     var plugins = process.env.UNI_HBUILDERX_PLUGINS
