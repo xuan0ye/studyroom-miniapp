@@ -191,6 +191,9 @@ export const redeemCard = (params, config = {}) => http.post('/api/wx/card/redee
  * 双人卡: 我购买的兑换码(购买者分享给同伴)
  */
 export const myRedeemCodes = (config = {}) => http.get('/api/wx/card/redeem/mine', config)
+
+export const previewCardGift = (params, config = {}) => http.post('/api/wx/card/gift/preview', params, config)
+export const claimCardGift = (params, config = {}) => http.post('/api/wx/card/gift/claim', params, config)
 /**
  * 查询订单支付状态(支付后轮询兜底)
  * @param {*} orderId

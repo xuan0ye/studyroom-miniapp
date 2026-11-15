@@ -195,6 +195,13 @@
 					}
 				},
 				{
+					"path": "card-gift/card-gift",
+					"style": {
+						"navigationBarTitleText": "领取卡券",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "card-redeem/card-redeem",
 					"style": {
 						"navigationBarTitleText": "兑换码兑换",
