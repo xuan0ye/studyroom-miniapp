@@ -3,6 +3,14 @@
 		<my-navbar leftText="意见反馈" leftIcon="arrow-left" :custom="false" bgColor="#ffffff" :autoBack="true"
 			leftIconSize="40" />
 		<view class="container">
+			<view class="reward-entry" @click="toReviewReward">
+				<u-icon name="star-fill" color="#d6a040" size="44" />
+				<view class="reward-entry-text">
+					<text class="reward-entry-title">上传五星好评，领三日卡</text>
+					<text class="reward-entry-hint">美团、抖音、大众点评，每个平台各限领一次</text>
+				</view>
+				<u-icon name="arrow-right" color="#b28b52" size="28" />
+			</view>
 			<!-- 客服微信二维码 -->
 			<view class="qr-card">
 				<u-text :bold="true" size="30" color="#333" text="联系客服微信" />
@@ -60,6 +68,9 @@
 			}
 		},
 		methods: {
+			toReviewReward() {
+				uni.navigateTo({ url: '/other_pages/review-reward/review-reward' })
+			},
 			formatTime(t) {
 				if (!t) return ''
 				return String(t).replace('T', ' ').substring(0, 16)
@@ -130,6 +141,10 @@
 </script>
 
 <style lang="scss" scoped>
+	.reward-entry { display: flex; align-items: center; gap: 16rpx; padding: 24rpx; margin-bottom: 30rpx; background: #fff6e9; border: 2rpx solid #f2dfbf; border-radius: 20rpx; }
+	.reward-entry-text { flex: 1; }
+	.reward-entry-title { display: block; font-size: 28rpx; font-weight: 600; color: #785024; }
+	.reward-entry-hint { display: block; margin-top: 10rpx; font-size: 23rpx; line-height: 1.5; color: #9b7c54; }
 	.container {
 		padding: 30rpx;
 	}

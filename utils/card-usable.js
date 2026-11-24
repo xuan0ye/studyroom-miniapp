@@ -55,11 +55,11 @@ export function isLongTermCard(c) {
 	return remain != null && remain >= 30
 }
 
-// 是否为周期卡(周卡/双周卡等, 7<=term<30): 一次预约连锁整段周期
+// 三日卡和周卡/双周卡等周期卡: 一次预约连锁整段周期
 // 这类卡**不可请假**(后端 leaveByCard 要求 term>=30), 只能用"取消锁座"释放座位后重新预约
 export function isCycleCard(c) {
 	var term = parseInt(c && c.card && c.card.term) || 0
-	return term >= 7 && term < 30
+	return (term === 3 || term >= 7) && term < 30
 }
 
 // 该卡当前是否可用(可用于预约)
@@ -165,6 +165,7 @@ export function cardRemainDays(c) {
 export function cardLockDays(c) {
 	if (cardWindow(c)) return 1
 	var d = cardRemainDays(c)
+	if (Number(c.card && c.card.term) === 3) return Math.max(d, 1)
 	return d >= 7 ? d : 1
 }
 

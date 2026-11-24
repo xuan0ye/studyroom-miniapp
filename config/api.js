@@ -360,6 +360,9 @@ export const submitFeedback = (params, config = {}) => http.post('/api/wx/points
  */
 export const myFeedback = (params, config = {}) => http.get('/api/wx/points/feedback/list', { params, ...config })
 
+export const myReviewRewards = (params, config = {}) => http.get('/api/wx/reviewReward/mine', { params, ...config })
+export const submitReviewReward = (params, config = {}) => http.post('/api/wx/reviewReward/submit', params, config)
+
 /**
  * ============ 抖音团购核销 ============
  */

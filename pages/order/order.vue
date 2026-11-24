@@ -129,7 +129,7 @@ import { reservationDate, takeReservationDate } from '@/utils/reservation-date.j
 						const now = new Date()
 						// 可用卡(日卡 term=1 / 周卡 term=7): 未激活(买来还没用过)的卡不过期
 						var validCards = card.filter(function(c) {
-							if (!c.card || (c.card.term !== 1 && c.card.term !== 7)) return false
+							if (!c.card || (c.card.term !== 1 && c.card.term !== 3 && c.card.term !== 7)) return false
 							return isCardUsable(c)
 						})
 						this.availableCards = validCards.length

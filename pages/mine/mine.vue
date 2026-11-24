@@ -285,6 +285,27 @@
 					</view>
 				</view>
 				<!-- 该功能已下线, 入口与页面均不再打包 -->
+				<view class="item" @click="toReviewReward">
+					<view class="rank">
+						<u-row>
+							<u-col span="1">
+								<view style="margin-left: 20rpx; width: 60rpx;">
+									<u-icon name="star-fill" color="#d6a040" size="50" />
+								</view>
+							</u-col>
+							<u-col span="7">
+								<view style="margin-left: 35rpx;">
+									<u-text size="36" text="好评领三日卡" />
+								</view>
+							</u-col>
+							<u-col span="4">
+								<view style="margin-right: 20rpx;">
+									<u-text size="24" color="#666666" align="right" text="两区通用" />
+								</view>
+							</u-col>
+						</u-row>
+					</view>
+				</view>
 				<!-- 第三组: 意见反馈 -->
 				<view class="item" @click="toFeedback">
 					<view class="rank">
@@ -301,7 +322,7 @@
 							</u-col>
 							<u-col span="4">
 								<view style="background-color: #ffffff;margin-right: 20rpx;">
-									<u-text :bold="false" size="24" color="#666666" align="right" text="联系客服/退款" />
+									<u-text :bold="false" size="24" color="#666666" align="right" text="客服/退款/好评赠卡" />
 								</view>
 							</u-col>
 						</u-row>
@@ -866,6 +887,9 @@
 				uni.navigateTo({
 					url: '/other_pages_mine/card-redeem/card-redeem'
 				})
+			},
+			toReviewReward() {
+				uni.navigateTo({ url: '/other_pages/review-reward/review-reward' })
 			},
 			toFeedback() {
 				uni.navigateTo({
